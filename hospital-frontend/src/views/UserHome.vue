@@ -210,7 +210,7 @@
             :key="campus"
             class="tab-pill"
             :class="{ active: activeCampus === campus }"
-            @click="activeCampus = campus"
+            @click="activeCampus = campus; handleCampusChange()"
           >
             {{ campus }}
           </div>
@@ -229,11 +229,12 @@
             <div class="dept-card-grid">
               <div 
                 v-for="(dept, idx) in clinicalDepts" 
-                :key="idx" 
+                :key="dept.departmentId || idx" 
                 class="entry-card"
-                :class="{ 'is-more': dept.includes('更多') }"
+                :class="{ 'is-more': (dept.departmentName || dept).includes('更多') }"
+                @click="handleDeptClick(dept)"
               >
-                <span class="dept-name">{{ dept }}</span>
+                <span class="dept-name">{{ dept.departmentName || dept }}</span>
                 <Icon icon="mdi:arrow-right" class="entry-arrow" />
               </div>
             </div>
@@ -241,20 +242,7 @@
 
           <div class="divider-line"></div>
 
-          <div class="dept-group">
-            <div class="group-header">
-              <div class="header-icon-box green">
-                <Icon icon="mdi:microscope" />
-              </div>
-              <h3>医技科室 <small>Medical Technology</small></h3>
-            </div>
-            <div class="dept-card-grid">
-              <div v-for="(dept, idx) in techDepts" :key="idx" class="entry-card">
-                <span class="dept-name">{{ dept }}</span>
-                <Icon icon="mdi:arrow-right" class="entry-arrow" />
-              </div>
-            </div>
-          </div>
+
         </div>
       </div>
 
@@ -394,7 +382,13 @@ const stopAutoPlay = () => { if (timer) clearInterval(timer); };
 const activeCampus = ref('朝晖院区');
 const campuses = ['朝晖院区', '屏峰院区'];
 const clinicalDepts = ref([]); 
-const techDepts = ['放射科', '超声科', '检验中心'];
+const techDepts = ref([]);
+
+// 院区ID映射
+const campusIdMap = {
+  '朝晖院区': '1',
+  '屏峰院区': '2'
+};
 
 // --- 院区介绍数据 (仅保留2个院区) ---
 const currentCampusIndex = ref(0);
@@ -430,16 +424,49 @@ const systemLinks = ['国家卫生健康委员会', '浙江省卫生健康委员
 // --- 逻辑 ---
 const handleLink = (name) => console.log('跳转:', name);
 
-const loadData = async () => {
+// 加载当前院区的科室数据
+const loadDepartmentData = async () => {
+  const hospitalId = campusIdMap[activeCampus.value];
+  if (!hospitalId) return;
+  
   try {
-    const res = await getDepartmentList();
-    if(res.code === 200) clinicalDepts.value = res.data.map(item => item.name);
+    const res = await getDepartmentList(hospitalId);
+    if (res.code === 200 && res.data) {
+      // 存储完整的科室对象，包含 departmentId
+      clinicalDepts.value = res.data;
+      // 医技科室暂时为空，或者可以根据科室名称判断
+      techDepts.value = [];
+    }
   } catch (error) {
-    clinicalDepts.value = ['心血管内科', '呼吸内科', '消化内科', '神经内科', '肾脏病科'];
+    console.error('获取科室数据失败:', error);
+    clinicalDepts.value = [];
+    techDepts.value = [];
   }
 };
 
-onMounted(() => { startAutoPlay(); loadData(); });
+// 处理科室点击事件
+const handleDeptClick = (dept) => {
+  // 如果 dept 是对象，获取 departmentId；如果是字符串，说明是旧数据格式
+  if (dept && typeof dept === 'object' && dept.departmentId) {
+    // 跳转到科室详情页
+    router.push(`/department/${dept.departmentId}`);
+  } else if (typeof dept === 'string') {
+    // 如果是字符串（旧数据格式），尝试通过科室名称查找
+    console.warn('科室数据格式为字符串，无法跳转:', dept);
+  } else {
+    console.warn('科室数据格式错误:', dept);
+  }
+};
+
+// 监听院区切换
+const handleCampusChange = () => {
+  loadDepartmentData();
+};
+
+onMounted(() => { 
+  startAutoPlay(); 
+  loadDepartmentData(); 
+});
 onUnmounted(() => { stopAutoPlay(); });
 </script>
 

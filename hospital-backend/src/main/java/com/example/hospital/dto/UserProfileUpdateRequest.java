@@ -1,7 +1,11 @@
 package com.example.hospital.dto;
 
+import com.example.hospital.common.PassToken;
 import com.example.hospital.common.Result;
+import com.example.hospital.entity.Department;
+import com.example.hospital.service.DepartmentService;
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -21,23 +25,48 @@ public class UserProfileUpdateRequest {
     @CrossOrigin // ★★★ 这一行就是允许前端连接后端的关键 ★★★
     public static class HospitalController {
 
-        // 1. 获取科室列表接口
+        @Autowired
+        private DepartmentService departmentService;
+
+        // 1. 获取科室列表接口（支持按 hospital_id 查询和搜索）
+        @PassToken
         @GetMapping("/departments")
-        public Result<List<Map<String, Object>>> getDepartments() {
-            System.out.println("前端正在请求科室列表...");
+        public Result<List<Department>> getDepartments(
+                @RequestParam(required = false) String hospitalId,
+                @RequestParam(required = false) String keyword) {
+            System.out.println("前端正在请求科室列表... hospitalId: " + hospitalId + ", keyword: " + keyword);
 
-            List<Map<String, Object>> depts = new ArrayList<>();
-            // 模拟数据库数据
-            depts.add(Map.of("id", 1, "name", "心血管内科", "desc", "Cardiology", "icon", "❤️"));
-            depts.add(Map.of("id", 2, "name", "神经外科", "desc", "Neurosurgery", "icon", "🧠"));
-            depts.add(Map.of("id", 3, "name", "骨科中心", "desc", "Orthopedics", "icon", "🦴"));
-            depts.add(Map.of("id", 4, "name", "儿科", "desc", "Pediatrics", "icon", "👶"));
-            depts.add(Map.of("id", 5, "name", "妇产科", "desc", "Obstetrics", "icon", "🤰"));
+            List<Department> departments;
+            
+            // 如果提供了搜索关键词，使用搜索方法
+            if (keyword != null && !keyword.trim().isEmpty()) {
+                departments = departmentService.searchDepartments(keyword, hospitalId);
+            } else if (hospitalId != null && !hospitalId.isEmpty()) {
+                // 按 hospital_id 查询
+                departments = departmentService.getDepartmentsByHospitalId(hospitalId);
+            } else {
+                // 查询所有科室
+                departments = departmentService.getAllDepartments();
+            }
 
-            return Result.success(depts);
+            return Result.success(departments);
         }
 
-        // 2. 模拟预约提交接口
+        // 2. 获取科室详情接口
+        @PassToken
+        @GetMapping("/departments/{departmentId}")
+        public Result<Department> getDepartmentById(@PathVariable("departmentId") String departmentId) {
+            System.out.println("前端正在请求科室详情... departmentId: " + departmentId);
+            Department department = departmentService.getDepartmentById(departmentId);
+            if (department == null) {
+                System.out.println("未找到科室，departmentId: " + departmentId);
+                return Result.error("科室不存在");
+            }
+            System.out.println("成功获取科室详情: " + department.getDepartmentName());
+            return Result.success(department);
+        }
+
+        // 3. 模拟预约提交接口
         @PostMapping("/appointment")
         public Result<String> createAppointment(@RequestBody Map<String, Object> payload) {
             System.out.println("收到预约请求: " + payload);

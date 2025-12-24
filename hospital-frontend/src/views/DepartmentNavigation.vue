@@ -37,19 +37,25 @@
       <div class="search-section">
         <div class="search-box-centered">
           <Icon icon="mdi:magnify" class="search-icon" />
-          <input type="text" placeholder="请输入疾病/科室名称" />
-          <button class="btn-search">搜索</button>
+          <input 
+            type="text" 
+            placeholder="请输入疾病/科室名称" 
+            v-model="searchKeyword"
+            @keyup.enter="handleSearch"
+            @input="handleInputChange"
+          />
+          <button type="button" class="btn-search" @click.stop="handleSearch">搜索</button>
         </div>
       </div>
   
       <div class="campus-tabs-bar">
         <div class="tabs-inner">
           <div 
-            v-for="campus in ['朝晖院区', '望江山院区', '越城院区']" 
+            v-for="campus in ['朝晖院区', '屏峰院区']" 
             :key="campus"
             class="tab-item"
             :class="{ active: activeCampus === campus }"
-            @click="activeCampus = campus"
+            @click="activeCampus = campus; loadDepartmentData()"
           >
             {{ campus }}
             <div class="triangle" v-if="activeCampus === campus"></div>
@@ -66,35 +72,22 @@
               <h2>临床科室</h2>
             </div>
             
-            <div class="dept-grid">
+            <div class="dept-grid" v-if="displayedDepts.length > 0">
               <div 
-                v-for="dept in clinicalDepts" 
-                :key="dept" 
+                v-for="dept in displayedDepts" 
+                :key="dept.departmentId || dept" 
                 class="dept-card"
                 @click="handleDeptClick(dept)"
               >
-                {{ dept }}
+                {{ dept.departmentName || dept }}
               </div>
+            </div>
+            <div v-else class="no-result">
+              <Icon icon="mdi:information-outline" />
+              <p>未找到相关科室，请尝试其他关键词</p>
             </div>
           </div>
   
-          <div class="dept-category-group" style="margin-top: 50px;">
-            <div class="category-header green">
-              <Icon icon="mdi:microscope" class="cat-icon" />
-              <h2>医技科室</h2>
-            </div>
-            
-            <div class="dept-grid">
-              <div 
-                v-for="dept in techDepts" 
-                :key="dept" 
-                class="dept-card"
-                @click="handleDeptClick(dept)"
-              >
-                {{ dept }}
-              </div>
-            </div>
-          </div>
   
         </div>
       </main>
@@ -152,41 +145,103 @@
     </div>
   </template>
   
-  <script setup>
-  import { ref } from 'vue';
-  import { useRouter } from 'vue-router';
-  import { Icon } from '@iconify/vue';
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { Icon } from '@iconify/vue';
+import { getDepartmentList } from '../api/hospital';
+
+const router = useRouter();
+const activeCampus = ref('朝晖院区');
+const searchKeyword = ref('');
+const allDepartments = ref([]);
+const loading = ref(false);
+
+// 院区ID映射
+const campusIdMap = {
+  '朝晖院区': '1',
+  '屏峰院区': '2'
+};
+
+// 计算属性：直接显示从后端获取的科室数据（后端已处理搜索）
+const displayedDepts = computed(() => {
+  return allDepartments.value;
+});
+
+// 加载科室数据
+const loadDepartmentData = async () => {
+  const hospitalId = campusIdMap[activeCampus.value];
+  if (!hospitalId) {
+    console.warn('未找到院区ID映射:', activeCampus.value);
+    return;
+  }
   
-  const router = useRouter();
-  const activeCampus = ref('朝晖院区');
-  
-  // --- 模拟数据 ---
-  const clinicalDepts = [
-    '急诊医学科', '重症医学科', '麻醉科', '疼痛科', 
-    '心血管内科', '呼吸内科', '消化内科', '神经内科', 
-    '肾脏病科', '血液病科', '内分泌科', '风湿免疫科',
-    '感染病科', '老年医学科', '全科医学科', '普通外科',
-    '肝胆胰外科', '胃肠胰外科', '肛肠外科', '甲状腺乳腺外科',
-    '血管外科', '骨科', '神经外科', '泌尿外科',
-    '胸外科', '心脏大血管外科', '整形外科', '妇科'
-  ];
-  
-  const techDepts = [
-    '放射科', '超声医学科', '检验医学中心', '病理科',
-    '药学部', '输血科', '核医学科', '营养科',
-    '健康管理中心', '高压氧科', '消毒供应中心'
-  ];
-  
-  const handleDeptClick = (name) => {
-    // 这里可以跳转到专家列表并自动筛选该科室，或者跳到科室详情页
-    console.log('点击科室:', name);
-    router.push('/specialist'); // 暂时跳转到专家介绍
-  };
-  
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-  </script>
+  loading.value = true;
+  try {
+    // 如果有搜索关键词，传递给后端进行搜索
+    const keyword = searchKeyword.value && searchKeyword.value.trim() 
+      ? searchKeyword.value.trim() 
+      : null;
+    
+    console.log('开始加载科室数据，hospitalId:', hospitalId, 'keyword:', keyword);
+    const res = await getDepartmentList(hospitalId, keyword);
+    console.log('收到响应:', res);
+    
+    if (res.code === 200 && res.data) {
+      allDepartments.value = res.data;
+      console.log('成功加载科室数据，数量:', res.data.length);
+    } else {
+      console.warn('响应数据异常:', res);
+      allDepartments.value = [];
+    }
+  } catch (error) {
+    console.error('获取科室数据失败:', error);
+    allDepartments.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 输入框变化处理（可选：实时搜索）
+const handleInputChange = () => {
+  // 可以在这里实现实时搜索，或者留空
+};
+
+// 搜索处理
+const handleSearch = (e) => {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  console.log('搜索按钮被点击，关键词:', searchKeyword.value);
+  loadDepartmentData();
+};
+
+const handleDeptClick = (dept) => {
+  console.log('点击科室:', dept);
+  // dept 应该是从数据库加载的对象，包含 departmentId
+  if (dept && dept.departmentId) {
+    const departmentId = dept.departmentId;
+    console.log('准备跳转到科室详情页，departmentId:', departmentId);
+    // 跳转到科室详情页
+    router.push(`/department/${departmentId}`).catch(err => {
+      console.error('路由跳转失败:', err);
+    });
+  } else {
+    console.warn('科室数据格式错误，缺少 departmentId:', dept);
+    console.warn('科室对象内容:', JSON.stringify(dept, null, 2));
+  }
+};
+
+const scrollToTop = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadDepartmentData();
+});
+</script>
   
   <style scoped>
   .dept-page { min-height: 100vh; background: #fff; font-family: 'Helvetica Neue', Arial, sans-serif; padding-bottom: 0; }
@@ -219,17 +274,51 @@
   
   /* 搜索区 (简洁居中) */
   .search-section { padding: 30px 0; display: flex; justify-content: center; background: #fff; }
-  .search-box-centered { position: relative; width: 600px; display: flex; align-items: center; }
+  .search-box-centered { 
+    position: relative; 
+    width: 600px; 
+    display: flex; 
+    align-items: center; 
+    z-index: 1; /* 确保搜索框在最上层 */
+  }
   .search-box-centered input {
-    width: 100%; padding: 12px 20px 12px 45px; border: 1px solid #ddd; border-radius: 30px; outline: none; font-size: 1rem; transition: 0.3s;
+    width: 100%; 
+    padding: 12px 120px 12px 45px; /* 右侧留出按钮空间 */
+    border: 1px solid #ddd; 
+    border-radius: 30px; 
+    outline: none; 
+    font-size: 1rem; 
+    transition: 0.3s;
+    position: relative;
+    z-index: 1;
   }
   .search-box-centered input:focus { border-color: #2f80ed; box-shadow: 0 0 0 3px rgba(47, 128, 237, 0.1); }
-  .search-icon { position: absolute; left: 15px; color: #999; font-size: 1.2rem; }
+  .search-icon { 
+    position: absolute; 
+    left: 15px; 
+    color: #999; 
+    font-size: 1.2rem; 
+    z-index: 2;
+    pointer-events: none; /* 图标不拦截点击 */
+  }
   .btn-search {
-    position: absolute; right: 5px; top: 5px; bottom: 5px;
-    background: #2385fc; color: white; border: none; padding: 0 30px; border-radius: 25px; cursor: pointer; font-weight: bold;
+    position: absolute; 
+    right: 5px; 
+    top: 5px; 
+    bottom: 5px;
+    background: #2385fc; 
+    color: white; 
+    border: none; 
+    padding: 0 30px; 
+    border-radius: 25px; 
+    cursor: pointer; 
+    font-weight: bold;
+    z-index: 3; /* 确保按钮在最上层 */
+    pointer-events: auto; /* 确保可以点击 */
+    transition: background 0.2s;
   }
   .btn-search:hover { background: #1a6cdb; }
+  .btn-search:active { background: #1556a8; transform: scale(0.98); }
   
   /* Tabs */
   .campus-tabs-bar { background: #0e5ebd; height: 60px; /* 深蓝色背景 */ }
@@ -255,6 +344,14 @@
     background: #f8f9fa; border: 1px solid #eee; padding: 20px; text-align: center; font-size: 1.1rem; color: #555; border-radius: 6px; cursor: pointer; transition: 0.2s;
   }
   .dept-card:hover { background: #fff; color: #2385fc; border-color: #2385fc; box-shadow: 0 5px 15px rgba(35, 133, 252, 0.15); transform: translateY(-3px); font-weight: bold; }
+  
+  /* 无结果提示 */
+  .no-result {
+    text-align: center; padding: 60px 20px; color: #999;
+    display: flex; flex-direction: column; align-items: center; gap: 15px;
+  }
+  .no-result .iconify { font-size: 3rem; opacity: 0.5; }
+  .no-result p { margin: 0; font-size: 1.1rem; }
   
   /* 悬浮楼层导航 */
   .side-anchor-nav { position: fixed; right: 30px; bottom: 150px; display: flex; flex-direction: column; gap: 10px; z-index: 100; }

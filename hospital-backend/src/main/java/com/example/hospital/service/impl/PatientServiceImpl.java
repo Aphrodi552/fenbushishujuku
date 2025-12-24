@@ -1,5 +1,6 @@
 package com.example.hospital.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.example.hospital.dto.AddPatientRequest;
 import com.example.hospital.dto.PatientResponse;
@@ -31,8 +32,10 @@ public class PatientServiceImpl implements PatientService {
     @Override
     public List<PatientResponse> getPatientsByUserId(String userId) {
         // 1. 查找用户和就诊人的所有关联关系
+        // 注意：UserPatient 使用复合主键，必须使用 QueryWrapper，不能使用 getById
         List<UserPatient> userPatientLinks = userPatientMapper.selectList(
-                new QueryWrapper<UserPatient>().eq("user_id", userId)
+                new LambdaQueryWrapper<UserPatient>()
+                        .eq(UserPatient::getUserId, userId)
         );
 
         if (userPatientLinks.isEmpty()) {
@@ -77,10 +80,11 @@ public class PatientServiceImpl implements PatientService {
 
         if (existingPatient != null) {
             // 2a. 如果患者已存在，检查是否已与当前用户关联
+            // 注意：UserPatient 使用复合主键，必须使用 QueryWrapper，不能使用 getById
             UserPatient link = userPatientMapper.selectOne(
-                    new QueryWrapper<UserPatient>()
-                            .eq("user_id", userId)
-                            .eq("patient_id", existingPatient.getPatientId())
+                    new LambdaQueryWrapper<UserPatient>()
+                            .eq(UserPatient::getUserId, userId)
+                            .eq(UserPatient::getPatientId, existingPatient.getPatientId())
             );
             if (link != null) {
                 throw new RuntimeException("该就诊人已添加，请勿重复操作");

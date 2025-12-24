@@ -10,6 +10,7 @@ import CampusDetail from '../views/CampusDetail.vue'
 import OutpatientSchedule from '../views/OutpatientSchedule.vue'
 import SpecialistList from '../views/SpecialistList.vue'
 import DepartmentNavigation from '../views/DepartmentNavigation.vue'
+import DepartmentDetail from '../views/DepartmentDetail.vue'
 import AppointmentRegister from '../views/AppointmentRegister.vue'
 import ContactUs from '../views/ContactUs.vue'
 import MyPatients from '../views/MyPatients.vue'
@@ -69,6 +70,11 @@ const routes = [
     path: '/department',
     name: 'DepartmentNavigation',
     component: DepartmentNavigation
+  },
+  {
+    path: '/department/:id',
+    name: 'DepartmentDetail',
+    component: DepartmentDetail
   },
   {
     path: '/appointment',

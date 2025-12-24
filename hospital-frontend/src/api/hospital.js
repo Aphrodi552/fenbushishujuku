@@ -1,11 +1,15 @@
 // src/api/hospital.js
 import request from '../utils/request'; // 引入刚才写的工具
 
-// 定义一个获取科室列表的方法
-export function getDepartmentList() {
+// 定义一个获取科室列表的方法（支持按 hospital_id 查询和搜索）
+export function getDepartmentList(hospitalId, keyword) {
+  const params = {};
+  if (hospitalId) params.hospitalId = hospitalId;
+  if (keyword) params.keyword = keyword;
   return request({
     url: '/api/hospital/departments', // 对应后端的 @GetMapping("/departments")
-    method: 'get'
+    method: 'get',
+    params: params
   });
 }
 
@@ -22,6 +26,14 @@ export function submitAppointment(data) {
 export function getHospitalIntro(hospitalId) {
   return request({
     url: `/api/hospitals/intro/${hospitalId}`,
+    method: 'get'
+  });
+}
+
+// 获取科室详情
+export function getDepartmentDetail(departmentId) {
+  return request({
+    url: `/api/hospital/departments/${departmentId}`,
     method: 'get'
   });
 }
