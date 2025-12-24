@@ -87,7 +87,17 @@ public class JwtUtils {
      * @return 用户ID
      */
     public String getUserIdFromToken(String token) {
-        return getClaimsFromToken(token).get("userId", String.class);
+        try {
+            Claims claims = getClaimsFromToken(token);
+            System.out.println("Token中的所有Claims: " + claims);
+            String userId = claims.get("userId", String.class);
+            System.out.println("从Token中提取的userId: " + userId);
+            return userId;
+        } catch (Exception e) {
+            System.err.println("从Token中提取userId失败: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
     }
     
     /**

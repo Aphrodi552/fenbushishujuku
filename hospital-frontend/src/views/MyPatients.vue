@@ -40,21 +40,21 @@
             </button>
           </div>
   
-          <div class="patient-grid">
-            <div v-for="p in patientList" :key="p.id" class="patient-card">
+          <div class="patient-grid" v-if="patientList.length > 0 || loading">
+            <div v-for="p in patientList" :key="p.patientId" class="patient-card">
               <div class="card-top">
                 <div class="p-avatar">
-                  {{ p.name.charAt(0) }}
+                  {{ (p.name || '').charAt(0) || '?' }}
                 </div>
                 <div class="p-info-main">
                   <div class="p-name-row">
-                    <span class="p-name">{{ p.name }}</span>
-                    <span class="p-tag" :class="p.relation === '本人' ? 'tag-blue' : 'tag-gray'">{{ p.relation }}</span>
+                    <span class="p-name">{{ p.name || '未知' }}</span>
+                    <span class="p-tag" :class="p.relation === '本人' ? 'tag-blue' : 'tag-gray'">{{ p.relation || '其他' }}</span>
                   </div>
                   <div class="p-detail-row">
-                    <Icon icon="mdi:gender-male-female" /> {{ p.gender }}
+                    <Icon icon="mdi:gender-male-female" /> {{ p.gender || '未知' }}
                     <span class="sep">|</span>
-                    {{ p.age }}岁
+                    {{ calculateAge(p.dob) }}岁
                   </div>
                 </div>
               </div>
@@ -74,7 +74,7 @@
                 <button class="btn-action edit" @click="openModal('edit', p)">
                   <Icon icon="mdi:pencil" /> 编辑
                 </button>
-                <button class="btn-action delete" @click="confirmDelete(p.id)">
+                <button class="btn-action delete" @click="confirmDelete(p.patientId)">
                   <Icon icon="mdi:delete" /> 删除
                 </button>
               </div>
@@ -86,6 +86,20 @@
                 <span>添加就诊人</span>
               </div>
             </div>
+          </div>
+          
+          <!-- 空状态 -->
+          <div v-if="!loading && patientList.length === 0" class="empty-state">
+            <Icon icon="mdi:account-off-outline" class="empty-icon" />
+            <p>暂无就诊人信息</p>
+            <button class="btn-add-empty" @click="openModal('add')">
+              <Icon icon="mdi:plus" /> 添加就诊人
+            </button>
+          </div>
+          
+          <!-- 加载状态 -->
+          <div v-if="loading" class="loading-state">
+            <p>加载中...</p>
           </div>
   
         </div>
@@ -129,8 +143,8 @@
                 </select>
               </div>
               <div class="form-group half">
-                <label>年龄</label>
-                <input type="number" v-model="formData.age" placeholder="年龄" />
+                <label>出生日期 <span class="required">*</span></label>
+                <input type="date" v-model="formData.dob" placeholder="选择出生日期" />
               </div>
             </div>
           </div>
@@ -193,18 +207,17 @@
     </div>
   </template>
   
-  <script setup>
-  import { ref } from 'vue';
-  import { useRouter } from 'vue-router';
-  import { Icon } from '@iconify/vue';
-  
-  const router = useRouter();
-  
-  // --- 模拟就诊人数据 ---
-  const patientList = ref([
-    { id: 1, name: '陆露露', relation: '本人', idCard: '330106199508201234', phone: '18866668888', gender: '女', age: 29 },
-    { id: 2, name: '张大爷', relation: '父母', idCard: '330106195501015678', phone: '13900001111', gender: '男', age: 68 }
-  ]);
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { Icon } from '@iconify/vue';
+import { getMyPatients, addPatient, updatePatient, deletePatient } from '../api/patient';
+
+const router = useRouter();
+
+// --- 就诊人数据 ---
+const patientList = ref([]);
+const loading = ref(false);
   
   // --- 页脚数据 (新增) ---
   const footerAddresses = [
@@ -221,49 +234,186 @@
   const showModal = ref(false);
   const modalType = ref('add'); // 'add' or 'edit'
   const formData = ref({
-    id: null, name: '', relation: '其他', idCard: '', phone: '', gender: '男', age: ''
+    patientId: null, 
+    name: '', 
+    relation: '其他', 
+    idCard: '', 
+    phone: '', 
+    gender: '男', 
+    dob: ''
   });
   
-  // --- 方法 ---
+  // --- 工具方法 ---
   const maskIdCard = (str) => str ? str.replace(/(\d{4})\d{10}(\d{4})/, '$1**********$2') : '';
   const maskPhone = (str) => str ? str.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2') : '';
+  
+  // 根据出生日期计算年龄
+  const calculateAge = (dob) => {
+    if (!dob) return '未知';
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    return age;
+  };
+  
+  // 将日期字符串转换为 YYYY-MM-DD 格式（用于 input[type="date"]）
+  const formatDateForInput = (dateStr) => {
+    if (!dateStr) return '';
+    // 如果是 LocalDate 格式 (YYYY-MM-DD)，直接返回
+    if (typeof dateStr === 'string' && dateStr.includes('-')) {
+      return dateStr.split('T')[0]; // 处理可能带时间的格式
+    }
+    return dateStr;
+  };
+  
+  // 加载就诊人列表
+  const loadPatients = async () => {
+    loading.value = true;
+    try {
+      const res = await getMyPatients();
+      if (res.code === 200 && res.data) {
+        patientList.value = res.data;
+      } else {
+        console.error('获取就诊人列表失败:', res.message);
+        patientList.value = [];
+      }
+    } catch (error) {
+      console.error('获取就诊人列表失败:', error);
+      patientList.value = [];
+    } finally {
+      loading.value = false;
+    }
+  };
   
   const openModal = (type, data = null) => {
     modalType.value = type;
     if (type === 'edit' && data) {
-      formData.value = { ...data };
+      formData.value = {
+        patientId: data.patientId,
+        name: data.name || '',
+        relation: data.relation || '其他',
+        idCard: data.idCard || '',
+        phone: data.phone || '',
+        gender: data.gender || '男',
+        dob: formatDateForInput(data.dob)
+      };
     } else {
-      formData.value = { id: null, name: '', relation: '其他', idCard: '', phone: '', gender: '男', age: '' };
+      formData.value = {
+        patientId: null,
+        name: '',
+        relation: '其他',
+        idCard: '',
+        phone: '',
+        gender: '男',
+        dob: ''
+      };
     }
     showModal.value = true;
   };
   
-  const closeModal = () => { showModal.value = false; };
+  const closeModal = () => { 
+    showModal.value = false;
+    formData.value = {
+      patientId: null,
+      name: '',
+      relation: '其他',
+      idCard: '',
+      phone: '',
+      gender: '男',
+      dob: ''
+    };
+  };
   
-  const savePatient = () => {
-    if (!formData.value.name || !formData.value.idCard || !formData.value.phone) {
-      alert('请填写必填项信息！');
+  const savePatient = async () => {
+    // 验证必填项
+    if (!formData.value.name || !formData.value.idCard || !formData.value.phone || !formData.value.dob) {
+      alert('请填写所有必填项！');
       return;
     }
-    if (modalType.value === 'add') {
-      const newId = patientList.value.length > 0 ? Math.max(...patientList.value.map(p => p.id)) + 1 : 1;
-      patientList.value.push({ ...formData.value, id: newId });
-      alert('添加成功！');
-    } else {
-      const index = patientList.value.findIndex(p => p.id === formData.value.id);
-      if (index !== -1) {
-        patientList.value[index] = { ...formData.value };
-        alert('修改成功！');
-      }
+    
+    // 验证手机号格式
+    const phoneRegex = /^1\d{10}$/;
+    if (!phoneRegex.test(formData.value.phone)) {
+      alert('请输入正确的手机号码格式（11位数字，以1开头）');
+      return;
     }
-    closeModal();
+    
+    // 验证身份证号格式（18位）
+    if (formData.value.idCard.length !== 18) {
+      alert('请输入18位身份证号');
+      return;
+    }
+    
+    loading.value = true;
+    try {
+      const requestData = {
+        name: formData.value.name,
+        idCard: formData.value.idCard,
+        phone: formData.value.phone,
+        dob: formData.value.dob,
+        gender: formData.value.gender,
+        relation: formData.value.relation
+      };
+      
+      if (modalType.value === 'add') {
+        const res = await addPatient(requestData);
+        if (res.code === 200) {
+          alert('添加成功！');
+          closeModal();
+          await loadPatients(); // 重新加载列表
+        } else {
+          alert(res.message || '添加失败，请重试');
+        }
+      } else {
+        const res = await updatePatient(formData.value.patientId, requestData);
+        if (res.code === 200) {
+          alert('修改成功！');
+          closeModal();
+          await loadPatients(); // 重新加载列表
+        } else {
+          alert(res.message || '修改失败，请重试');
+        }
+      }
+    } catch (error) {
+      console.error('保存就诊人失败:', error);
+      const errorMessage = error.message || error.response?.data?.message || '保存失败，请检查网络连接';
+      alert(errorMessage);
+    } finally {
+      loading.value = false;
+    }
   };
   
-  const confirmDelete = (id) => {
-    if (confirm('确定要删除这位就诊人吗？删除后不可恢复。')) {
-      patientList.value = patientList.value.filter(p => p.id !== id);
+  const confirmDelete = async (patientId) => {
+    if (!confirm('确定要删除这位就诊人吗？删除后不可恢复。')) {
+      return;
+    }
+    
+    loading.value = true;
+    try {
+      const res = await deletePatient(patientId);
+      if (res.code === 200) {
+        alert('删除成功！');
+        await loadPatients(); // 重新加载列表
+      } else {
+        alert(res.message || '删除失败，请重试');
+      }
+    } catch (error) {
+      console.error('删除就诊人失败:', error);
+      const errorMessage = error.message || error.response?.data?.message || '删除失败，请检查网络连接';
+      alert(errorMessage);
+    } finally {
+      loading.value = false;
     }
   };
+  
+  // 组件挂载时加载数据
+  onMounted(() => {
+    loadPatients();
+  });
   </script>
   
   <style scoped>
@@ -374,6 +524,43 @@
   .social-icons { display: flex; gap: 15px; margin: 30px 0; }
   .icon-box { width: 40px; height: 40px; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; }
   .icon-box:hover { background: white; color: #1a3a6e; }
+  
+  /* 空状态和加载状态 */
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #999;
+  }
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.5;
+  }
+  .empty-state p {
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+  }
+  .btn-add-empty {
+    background: #004ea2;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 30px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+  }
+  .btn-add-empty:hover {
+    background: #003d80;
+  }
+  .loading-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+    font-size: 1.1rem;
+  }
   
   @media(max-width: 900px) {
     .patient-grid { grid-template-columns: 1fr; }

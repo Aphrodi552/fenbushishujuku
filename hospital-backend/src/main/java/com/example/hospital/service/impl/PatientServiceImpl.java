@@ -2,6 +2,7 @@ package com.example.hospital.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.example.hospital.dto.AddPatientRequest;
 import com.example.hospital.dto.PatientResponse;
 import com.example.hospital.entity.Patient;
@@ -121,6 +122,96 @@ public class PatientServiceImpl implements PatientService {
         response.setRelation(request.getRelation());
 
         return response;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public PatientResponse updatePatient(String userId, String patientId, AddPatientRequest request) {
+        // 1. 验证该就诊人是否属于当前用户
+        UserPatient link = userPatientMapper.selectOne(
+                new LambdaQueryWrapper<UserPatient>()
+                        .eq(UserPatient::getUserId, userId)
+                        .eq(UserPatient::getPatientId, patientId)
+        );
+        
+        if (link == null) {
+            throw new RuntimeException("该就诊人不属于当前用户，无法修改");
+        }
+
+        // 2. 获取就诊人信息
+        Patient patient = patientMapper.selectById(patientId);
+        if (patient == null) {
+            throw new RuntimeException("就诊人不存在");
+        }
+
+        // 3. 更新就诊人信息
+        patient.setPatientName(request.getName());
+        patient.setPatientIdcard(request.getIdCard());
+        patient.setPatientPhone(request.getPhone());
+        patient.setPatientBirthday(request.getDob());
+        patient.setPatientGender(request.getGender());
+        patientMapper.updateById(patient);
+
+        // 4. 更新关联关系（如果需要修改关系）
+        if (request.getRelation() != null && !request.getRelation().equals(link.getRelationType())) {
+            // 注意：UserPatient 是复合主键，不能使用 updateById
+            // 使用 UpdateWrapper 更新非主键字段
+            UserPatient updateEntity = new UserPatient();
+            updateEntity.setRelationType(request.getRelation());
+            
+            int updateResult = userPatientMapper.update(
+                    updateEntity,
+                    new LambdaUpdateWrapper<UserPatient>()
+                            .eq(UserPatient::getUserId, userId)
+                            .eq(UserPatient::getPatientId, patientId)
+            );
+            
+            if (updateResult > 0) {
+                link.setRelationType(request.getRelation());
+            }
+        }
+
+        // 5. 组装并返回结果
+        PatientResponse response = new PatientResponse();
+        response.setPatientId(patient.getPatientId());
+        response.setName(patient.getPatientName());
+        response.setDob(patient.getPatientBirthday());
+        response.setGender(patient.getPatientGender());
+        response.setIdCard(patient.getPatientIdcard());
+        response.setPhone(patient.getPatientPhone());
+        response.setRelation(link.getRelationType());
+
+        return response;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void deletePatient(String userId, String patientId) {
+        // 1. 验证该就诊人是否属于当前用户
+        UserPatient link = userPatientMapper.selectOne(
+                new LambdaQueryWrapper<UserPatient>()
+                        .eq(UserPatient::getUserId, userId)
+                        .eq(UserPatient::getPatientId, patientId)
+        );
+        
+        if (link == null) {
+            throw new RuntimeException("该就诊人不属于当前用户，无法删除");
+        }
+
+        // 2. 删除用户与就诊人的关联关系
+        // 注意：UserPatient 使用复合主键，必须使用 QueryWrapper 删除
+        int deleteResult = userPatientMapper.delete(
+                new LambdaQueryWrapper<UserPatient>()
+                        .eq(UserPatient::getUserId, userId)
+                        .eq(UserPatient::getPatientId, patientId)
+        );
+
+        if (deleteResult <= 0) {
+            throw new RuntimeException("删除关联关系失败");
+        }
+
+        // 注意：这里只删除关联关系，不删除 patient 表中的数据
+        // 因为该患者可能被其他用户关联
     }
 }
 
