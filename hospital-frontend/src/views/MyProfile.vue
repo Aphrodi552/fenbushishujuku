@@ -26,8 +26,8 @@
             <div class="profile-sidebar">
               <div class="avatar-box">
                 <div class="avatar-circle"><img :src="userInfo.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'" alt="avatar"></div>
-                <h3 class="user-name">{{ userInfo.realName || '未实名用户' }}</h3>
-                <span class="user-role">普通用户</span>
+                <h3 class="user-name">{{ userInfo.userId || '加载中...' }}</h3>
+                <span class="user-role">{{ userInfo.role === 'admin' ? '管理员' : userInfo.role === 'doctor' ? '医生' : '普通用户' }}</span>
               </div>
               <div class="sidebar-menu">
                 <div class="menu-item" :class="{ active: currentTab === 'info' }" @click="currentTab = 'info'"><Icon icon="mdi:account-details" /> 基本资料</div>
@@ -43,9 +43,14 @@
                   <button class="btn-edit" @click="toggleEdit"><Icon :icon="isEditing ? 'mdi:content-save' : 'mdi:pencil'" /> {{ isEditing ? '保存修改' : '编辑资料' }}</button>
                 </div>
                 <div class="form-container">
-                  <div class="form-group"><label>用户名</label><input type="text" v-model="userInfo.username" disabled class="input-disabled"></div>
-                  <div class="form-group"><label>真实姓名</label><input type="text" v-model="userInfo.realName" :disabled="!isEditing" :class="{ 'input-edit': isEditing }"></div>
-                  <div class="form-group"><label>手机号码</label><input type="text" v-model="userInfo.phone" :disabled="!isEditing" :class="{ 'input-edit': isEditing }"></div>
+                  <div class="form-group">
+                    <label>用户编号</label>
+                    <input type="text" v-model="userInfo.userId" disabled class="input-disabled">
+                  </div>
+                  <div class="form-group">
+                    <label>手机号码</label>
+                    <input type="text" v-model="userInfo.userPhone" :disabled="!isEditing" :class="{ 'input-edit': isEditing }" placeholder="请输入手机号码">
+                  </div>
                 </div>
               </div>
   
@@ -78,39 +83,128 @@
     </div>
   </template>
   
-  <script setup>
-  import { ref, onMounted } from 'vue';
-  import { useRouter } from 'vue-router';
-  import { Icon } from '@iconify/vue';
-  
-  const router = useRouter();
-  const currentTab = ref('info');
-  const isEditing = ref(false);
-  const myReviews = ref([]);
-  
-  const userInfo = ref({
-    username: 'user_18760',
-    realName: '史良帅',
-    phone: '187******60',
-    email: 'shiliangshuai@example.com',
-    avatar: '' 
-  });
-  
-  onMounted(() => {
-    const saved = localStorage.getItem('hospital_reviews');
-    if (saved) {
-      myReviews.value = JSON.parse(saved);
+<script setup>
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { Icon } from '@iconify/vue';
+import { getUserProfile, updateUserProfile } from '../api/user';
+
+const router = useRouter();
+const currentTab = ref('info');
+const isEditing = ref(false);
+const myReviews = ref([]);
+const loading = ref(false);
+
+const userInfo = ref({
+  userId: '',
+  userPhone: '',
+  role: ''
+});
+
+// 加载用户信息
+const loadUserInfo = async () => {
+  loading.value = true;
+  try {
+    const res = await getUserProfile();
+    if (res.code === 200 && res.data) {
+      userInfo.value = {
+        userId: res.data.userId || '',
+        userPhone: res.data.userPhone || '',
+        role: res.data.role || 'user'
+      };
+      // 保存原始手机号，用于判断是否修改
+      userInfo.value.originalPhone = res.data.userPhone || '';
+    } else {
+      console.error('获取用户信息失败:', res.message);
+      alert('获取用户信息失败，请重新登录');
     }
-  });
+  } catch (error) {
+    console.error('获取用户信息失败:', error);
+    alert('获取用户信息失败，请检查网络连接');
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 保存用户信息
+const saveUserInfo = async () => {
+  const phone = userInfo.value.userPhone?.trim();
   
-  const toggleEdit = () => {
-    if (isEditing.value) { alert('信息保存成功！'); isEditing.value = false; } else { isEditing.value = true; }
-  };
+  if (!phone || phone === '') {
+    alert('请输入手机号码');
+    return;
+  }
+
+  // 简单的手机号格式验证：11位数字，以1开头
+  const phoneRegex = /^1\d{10}$/;
+  if (!phoneRegex.test(phone)) {
+    alert('请输入正确的手机号码格式（11位数字，以1开头）');
+    return;
+  }
+
+  // 如果手机号没有变化，直接退出编辑模式
+  const originalPhone = userInfo.value.originalPhone || '';
+  if (phone === originalPhone) {
+    isEditing.value = false;
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const res = await updateUserProfile({
+      phone: phone
+    });
+    
+    if (res.code === 200) {
+      alert('信息保存成功！');
+      isEditing.value = false;
+      // 重新加载用户信息以确保数据同步
+      await loadUserInfo();
+    } else {
+      // 显示后端返回的错误信息
+      alert(res.message || '保存失败，请重试');
+    }
+  } catch (error) {
+    console.error('保存用户信息失败:', error);
+    // 尝试从错误中获取错误信息
+    // 如果是在响应拦截器中 reject 的错误，message 已经包含错误信息
+    const errorMessage = error.message || error.response?.data?.message || '保存失败，请检查网络连接';
+    alert(errorMessage);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const toggleEdit = () => {
+  if (isEditing.value) {
+    // 保存修改
+    saveUserInfo();
+  } else {
+    // 进入编辑模式，保存当前手机号作为原始值
+    userInfo.value.originalPhone = userInfo.value.userPhone;
+    isEditing.value = true;
+  }
+};
+
+const logout = () => {
+  if(confirm('确定要退出登录吗？')) {
+    // 清除本地存储的 token 等信息
+    localStorage.removeItem('hospital_token');
+    router.push('/login');
+  }
+};
+
+onMounted(() => {
+  // 加载用户信息
+  loadUserInfo();
   
-  const logout = () => {
-    if(confirm('确定要退出登录吗？')) router.push('/login');
-  };
-  </script>
+  // 加载评价记录
+  const saved = localStorage.getItem('hospital_reviews');
+  if (saved) {
+    myReviews.value = JSON.parse(saved);
+  }
+});
+</script>
   
   <style scoped>
   /* 基础样式复用 */
