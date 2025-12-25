@@ -2,6 +2,7 @@ package com.example.hospital.service.impl;
 
 import com.example.hospital.common.BusinessException;
 import com.example.hospital.common.ResultCode;
+import com.example.hospital.dto.ChangePasswordRequest;
 import com.example.hospital.dto.UserProfileUpdateRequest;
 import com.example.hospital.entity.Patient;
 import com.example.hospital.entity.User;
@@ -91,6 +92,55 @@ public class UserServiceImpl implements UserService {
         // 返回更新后的用户信息，密码脱敏
         user.setUserPassword(null);
         return user;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean changePassword(String userId, ChangePasswordRequest request) {
+        // 1. 验证请求参数
+        if (request.getOldPassword() == null || request.getOldPassword().trim().isEmpty()) {
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "请输入旧密码");
+        }
+        if (request.getNewPassword() == null || request.getNewPassword().trim().isEmpty()) {
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "请输入新密码");
+        }
+
+        String oldPassword = request.getOldPassword().trim();
+        String newPassword = request.getNewPassword().trim();
+
+        // 2. 验证新密码长度（建议至少6位）
+        if (newPassword.length() < 6) {
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "新密码长度至少为6位");
+        }
+
+        // 3. 验证新密码不能与旧密码相同
+        if (oldPassword.equals(newPassword)) {
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "新密码不能与旧密码相同");
+        }
+
+        // 4. 查询用户
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new BusinessException(ResultCode.USER_NOT_EXIST, "用户不存在");
+        }
+
+        // 5. 验证旧密码是否正确
+        // 注意：当前系统使用明文密码存储，生产环境应使用BCrypt等加密方式
+        if (!user.getUserPassword().equals(oldPassword)) {
+            throw new BusinessException(ResultCode.USER_PASSWORD_ERROR, "旧密码错误");
+        }
+
+        // 6. 更新密码
+        // 注意：当前系统使用明文存储，生产环境应使用BCryptPasswordEncoder加密
+        user.setUserPassword(newPassword);
+        int updateResult = userMapper.updateById(user);
+
+        if (updateResult <= 0) {
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "修改密码失败，请重试");
+        }
+
+        System.out.println("密码修改成功 - userId: " + userId);
+        return true;
     }
 }
 

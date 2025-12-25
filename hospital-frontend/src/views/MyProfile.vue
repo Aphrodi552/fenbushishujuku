@@ -4,7 +4,7 @@
         <div class="header-inner">
           <div class="logo-group" @click="router.push('/user')">
             <span class="logo-icon">🏥</span>
-            <div class="logo-text"><h1>浙江省人民医院</h1><small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small></div>
+            <div class="logo-text"><h1>浙江工业大学健行医院</h1><small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small></div>
           </div>
           <div class="back-home" @click="router.push('/user')"><Icon icon="mdi:home" /> 返回首页</div>
         </div>
@@ -31,6 +31,7 @@
               </div>
               <div class="sidebar-menu">
                 <div class="menu-item" :class="{ active: currentTab === 'info' }" @click="currentTab = 'info'"><Icon icon="mdi:account-details" /> 基本资料</div>
+                <div class="menu-item" :class="{ active: currentTab === 'password' }" @click="currentTab = 'password'"><Icon icon="mdi:lock-reset" /> 修改密码</div>
                 <div class="menu-item" :class="{ active: currentTab === 'reviews' }" @click="currentTab = 'reviews'"><Icon icon="mdi:comment-quote" /> 我的评价</div>
                 <div class="menu-item" @click="logout"><Icon icon="mdi:logout" /> 退出登录</div>
               </div>
@@ -53,20 +54,50 @@
                   </div>
                 </div>
               </div>
-  
+
+              <div v-if="currentTab === 'password'">
+                <div class="panel-header">
+                  <h2>修改密码</h2>
+                </div>
+                <div class="form-container">
+                  <div class="form-group">
+                    <label>旧密码</label>
+                    <input type="password" v-model="passwordForm.oldPassword" class="input-edit" placeholder="请输入旧密码">
+                  </div>
+                  <div class="form-group">
+                    <label>新密码</label>
+                    <input type="password" v-model="passwordForm.newPassword" class="input-edit" placeholder="请输入新密码（至少6位）">
+                    <small class="form-hint">密码长度至少为6位</small>
+                  </div>
+                  <div class="form-group">
+                    <label>确认新密码</label>
+                    <input type="password" v-model="passwordForm.confirmPassword" class="input-edit" placeholder="请再次输入新密码">
+                  </div>
+                  <div class="form-actions">
+                    <button class="btn-submit" @click="submitPasswordChange" :disabled="changingPassword">
+                      <Icon icon="mdi:content-save" /> {{ changingPassword ? '修改中...' : '确认修改' }}
+                    </button>
+                    <button class="btn-cancel" @click="resetPasswordForm">重置</button>
+                  </div>
+                </div>
+              </div>
+
               <div v-if="currentTab === 'reviews'">
                 <div class="panel-header"><h2>我的评价记录</h2></div>
-                <div v-if="myReviews.length === 0" class="empty-reviews">
+                <div v-if="loadingReviews" class="empty-reviews">
+                  <Icon icon="mdi:loading" class="empty-icon" /><p>加载中...</p>
+                </div>
+                <div v-else-if="myReviews.length === 0" class="empty-reviews">
                   <Icon icon="mdi:comment-remove-outline" class="empty-icon" /><p>您还没有发表过任何评价</p>
                 </div>
                 <div v-else class="reviews-list">
-                  <div v-for="rev in myReviews" :key="rev.id" class="my-review-card">
+                  <div v-for="rev in myReviews" :key="rev.reviewId" class="my-review-card">
                     <div class="rev-header">
-                      <span class="rev-doc">评价对象：{{ rev.doctorName }} 医生</span>
-                      <span class="rev-date">{{ rev.time }}</span>
+                      <span class="rev-doc">评价对象：{{ rev.doctorName || '未知医生' }} 医生</span>
+                      <span class="rev-date">{{ formatReviewDate(rev.createdAt) }}</span>
                     </div>
                     <div class="rev-rating">
-                      <Icon v-for="n in rev.rating" :key="n" icon="mdi:star" class="star-yellow" />
+                      <Icon v-for="n in 5" :key="n" :icon="n <= rev.rating ? 'mdi:star' : 'mdi:star-outline'" :class="n <= rev.rating ? 'star-yellow' : 'star-gray'" />
                     </div>
                     <p class="rev-text">{{ rev.content }}</p>
                   </div>
@@ -78,28 +109,38 @@
       </main>
   
       <footer class="app-footer">
-        <div class="footer-bottom-bar">Copyright © 2025 浙江省人民医院网站版权所有</div>
+        <div class="footer-bottom-bar">Copyright © 2025 浙江工业大学健行医院网站版权所有</div>
       </footer>
     </div>
   </template>
   
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
-import { getUserProfile, updateUserProfile } from '../api/user';
+import { getUserProfile, updateUserProfile, changePassword } from '../api/user';
+import { getMyReviews } from '../api/review';
 
 const router = useRouter();
 const currentTab = ref('info');
 const isEditing = ref(false);
 const myReviews = ref([]);
 const loading = ref(false);
+const loadingReviews = ref(false);
 
 const userInfo = ref({
   userId: '',
   userPhone: '',
   role: ''
 });
+
+// 修改密码表单
+const passwordForm = ref({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+});
+const changingPassword = ref(false);
 
 // 加载用户信息
 const loadUserInfo = async () => {
@@ -186,6 +227,122 @@ const toggleEdit = () => {
   }
 };
 
+// 提交密码修改
+const submitPasswordChange = async () => {
+  const { oldPassword, newPassword, confirmPassword } = passwordForm.value;
+
+  // 验证表单
+  if (!oldPassword || !oldPassword.trim()) {
+    alert('请输入旧密码');
+    return;
+  }
+
+  if (!newPassword || !newPassword.trim()) {
+    alert('请输入新密码');
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    alert('新密码长度至少为6位');
+    return;
+  }
+
+  if (!confirmPassword || !confirmPassword.trim()) {
+    alert('请确认新密码');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    alert('两次输入的新密码不一致');
+    return;
+  }
+
+  if (oldPassword === newPassword) {
+    alert('新密码不能与旧密码相同');
+    return;
+  }
+
+  changingPassword.value = true;
+  try {
+    const res = await changePassword({
+      oldPassword: oldPassword.trim(),
+      newPassword: newPassword.trim()
+    });
+
+    if (res.code === 200) {
+      alert('密码修改成功！');
+      resetPasswordForm();
+    } else {
+      alert(res.message || '修改密码失败，请重试');
+    }
+  } catch (error) {
+    console.error('修改密码失败:', error);
+    alert(error.message || '修改密码失败，请检查网络连接');
+  } finally {
+    changingPassword.value = false;
+  }
+};
+
+// 重置密码表单
+const resetPasswordForm = () => {
+  passwordForm.value = {
+    oldPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  };
+};
+
+// 加载我的评价
+const loadMyReviews = async () => {
+  loadingReviews.value = true;
+  try {
+    const res = await getMyReviews();
+    console.log('获取评价列表API响应:', res);
+    if (res.code === 200 && res.data) {
+      myReviews.value = res.data.map(review => ({
+        reviewId: review.reviewId,
+        doctorName: review.doctorName || '未知医生',
+        rating: review.rating || 5,
+        content: review.content || '',
+        createdAt: review.createdAt
+      }));
+      console.log('转换后的评价列表:', myReviews.value);
+    } else {
+      console.error('获取评价列表失败:', res.message);
+      myReviews.value = [];
+    }
+  } catch (error) {
+    console.error('获取评价列表失败:', error);
+    alert(error.message || '获取评价列表失败，请检查网络连接');
+    myReviews.value = [];
+  } finally {
+    loadingReviews.value = false;
+  }
+};
+
+// 格式化评价日期
+const formatReviewDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
+// 监听 currentTab 变化，当切换到评价页面时加载数据
+watch(currentTab, (newTab) => {
+  if (newTab === 'reviews') {
+    loadMyReviews();
+  }
+});
+
 const logout = () => {
   if(confirm('确定要退出登录吗？')) {
     // 清除本地存储的 token 等信息
@@ -198,10 +355,9 @@ onMounted(() => {
   // 加载用户信息
   loadUserInfo();
   
-  // 加载评价记录
-  const saved = localStorage.getItem('hospital_reviews');
-  if (saved) {
-    myReviews.value = JSON.parse(saved);
+  // 如果当前在评价页面，加载评价记录
+  if (currentTab.value === 'reviews') {
+    loadMyReviews();
   }
 });
 </script>
@@ -244,6 +400,13 @@ onMounted(() => {
   .form-group input { width: 100%; padding: 12px 15px; border: 1px solid #ddd; border-radius: 6px; outline: none; font-size: 1rem; transition: 0.3s; background: #fff; }
   .input-disabled { background: #f5f5f5 !important; color: #999; cursor: not-allowed; }
   .input-edit { border-color: #004ea2; background: #fbfdff; }
+  .form-hint { display: block; margin-top: 5px; color: #999; font-size: 0.85rem; }
+  .form-actions { margin-top: 30px; display: flex; gap: 15px; }
+  .btn-submit { background: #004ea2; color: white; border: none; padding: 12px 30px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 1rem; transition: 0.3s; }
+  .btn-submit:hover:not(:disabled) { background: #003d82; }
+  .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-cancel { background: #f5f5f5; color: #666; border: 1px solid #ddd; padding: 12px 30px; border-radius: 6px; cursor: pointer; font-size: 1rem; transition: 0.3s; }
+  .btn-cancel:hover { background: #e8e8e8; }
   
   /* 我的评价列表样式 */
   .empty-reviews { text-align: center; color: #999; padding: 40px; }
@@ -252,6 +415,7 @@ onMounted(() => {
   .rev-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; color: #333; }
   .rev-date { font-weight: normal; color: #999; font-size: 0.85rem; }
   .star-yellow { color: #ffca28; }
+  .star-gray { color: #ddd; }
   .rev-text { color: #666; line-height: 1.5; margin-top: 10px; }
   .app-footer { background: #1a3a6e; color: rgba(255,255,255,0.6); text-align: center; padding: 20px; margin-top: 50px; }
   </style>

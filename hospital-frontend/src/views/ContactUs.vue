@@ -6,7 +6,7 @@
           <div class="logo-group" @click="router.push('/user')">
             <span class="logo-icon">🏥</span>
             <div class="logo-text">
-              <h1>浙江省人民医院</h1>
+              <h1>浙江工业大学健行医院</h1>
               <small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small>
             </div>
           </div>
@@ -39,7 +39,7 @@
           
           <div class="contact-card">
             <div class="info-side">
-              <h3 class="campus-name">浙江省人民医院朝晖院区</h3>
+              <h3 class="campus-name">浙江工业大学健行医院朝晖院区</h3>
               <div class="info-list">
                 <div class="info-item">
                   <span class="label">地址：</span>
@@ -79,7 +79,7 @@
               <div class="logo-placeholder">
                 <Icon icon="mdi:hospital-building" class="logo-ico" />
                 <div class="logo-txt">
-                  <h3>浙江省人民医院</h3>
+                  <h3>浙江工业大学健行医院</h3>
                   <small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small>
                 </div>
               </div>
@@ -93,10 +93,10 @@
           <div class="footer-col col-mid">
             <h3 class="footer-title">托管医院</h3>
             <ul class="footer-link-list">
-              <li><span class="dot">●</span> 浙江省人民医院淳安分院</li>
-              <li><span class="dot">●</span> 浙江省人民医院天台分院</li>
-              <li><span class="dot">●</span> 浙江省人民医院浙东南院区</li>
-              <li><span class="dot">●</span> 浙江省人民医院定海分院</li>
+              <li><span class="dot">●</span> 浙江工业大学健行医院淳安分院</li>
+              <li><span class="dot">●</span> 浙江工业大学健行医院天台分院</li>
+              <li><span class="dot">●</span> 浙江工业大学健行医院浙东南院区</li>
+              <li><span class="dot">●</span> 浙江工业大学健行医院定海分院</li>
             </ul>
           </div>
           <div class="footer-col col-right">
@@ -113,7 +113,7 @@
           </div>
         </div>
         <div class="footer-bottom-bar">
-          Copyright © 2025 浙江省人民医院网站版权所有 | 浙ICP备06015436号
+          Copyright © 2025 浙江工业大学健行医院网站版权所有 | 浙ICP备06015436号
           <span class="tech-support">技术支持：杭州触梦智能科技有限公司</span>
         </div>
       </footer>

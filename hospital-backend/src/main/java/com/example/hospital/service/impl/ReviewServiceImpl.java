@@ -6,10 +6,12 @@ import com.example.hospital.common.ResultCode;
 import com.example.hospital.dto.CreateReviewRequest;
 import com.example.hospital.dto.ReviewResponse;
 import com.example.hospital.entity.Appointment;
+import com.example.hospital.entity.Doctor;
 import com.example.hospital.entity.Review;
 import com.example.hospital.entity.Schedule;
 import com.example.hospital.entity.Visit;
 import com.example.hospital.mapper.AppointmentMapper;
+import com.example.hospital.mapper.DoctorMapper;
 import com.example.hospital.mapper.ReviewMapper;
 import com.example.hospital.mapper.ScheduleMapper;
 import com.example.hospital.mapper.VisitMapper;
@@ -20,7 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 评价服务实现类
@@ -39,6 +47,9 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Autowired
     private ScheduleMapper scheduleMapper;
+
+    @Autowired
+    private DoctorMapper doctorMapper;
 
     /**
      * 生成唯一的评价ID（以R开头，长度不超过32）
@@ -178,6 +189,66 @@ public class ReviewServiceImpl implements ReviewService {
         response.setCreatedAt(review.getReviewTime()); // 从实体类的 reviewTime 字段获取
 
         return response;
+    }
+
+    @Override
+    public List<ReviewResponse> getReviewsByUserId(String userId) {
+        // ✅ 使用 JOIN 查询一次性获取所有相关信息（包括医生姓名）
+        // 这样可以避免多次查询和关联，提高性能并确保数据完整性
+        System.out.println("ReviewServiceImpl.getReviewsByUserId - 查询用户ID: " + userId);
+        List<ReviewResponse> reviews = reviewMapper.selectReviewsWithDoctorByUserId(userId);
+        
+        System.out.println("ReviewServiceImpl.getReviewsByUserId - 查询到的评价数量: " + (reviews != null ? reviews.size() : 0));
+        
+        if (reviews == null || reviews.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // ✅ 额外去重：按 reviewId 去重，确保每个评价只出现一次
+        // 使用 LinkedHashMap 保持顺序
+        Map<String, ReviewResponse> uniqueReviews = new LinkedHashMap<>();
+        for (ReviewResponse review : reviews) {
+            if (review.getReviewId() != null && !uniqueReviews.containsKey(review.getReviewId())) {
+                uniqueReviews.put(review.getReviewId(), review);
+                System.out.println("ReviewServiceImpl.getReviewsByUserId - 添加评价: " + review.getReviewId() + ", 医生: " + review.getDoctorName());
+            } else {
+                System.out.println("ReviewServiceImpl.getReviewsByUserId - 跳过重复评价: " + review.getReviewId());
+            }
+        }
+
+        System.out.println("ReviewServiceImpl.getReviewsByUserId - 去重后的评价数量: " + uniqueReviews.size());
+
+        // 返回去重后的评价列表
+        return new ArrayList<>(uniqueReviews.values());
+    }
+
+    @Override
+    public List<ReviewResponse> getReviewsByDoctorId(String doctorId) {
+        // ✅ 使用 JOIN 查询一次性获取该医生的所有评价（包括医生姓名）
+        System.out.println("ReviewServiceImpl.getReviewsByDoctorId - 查询医生ID: " + doctorId);
+        List<ReviewResponse> reviews = reviewMapper.selectReviewsByDoctorId(doctorId);
+        
+        System.out.println("ReviewServiceImpl.getReviewsByDoctorId - 查询到的评价数量: " + (reviews != null ? reviews.size() : 0));
+        
+        if (reviews == null || reviews.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // ✅ 额外去重：按 reviewId 去重，确保每个评价只出现一次
+        Map<String, ReviewResponse> uniqueReviews = new LinkedHashMap<>();
+        for (ReviewResponse review : reviews) {
+            if (review.getReviewId() != null && !uniqueReviews.containsKey(review.getReviewId())) {
+                uniqueReviews.put(review.getReviewId(), review);
+                System.out.println("ReviewServiceImpl.getReviewsByDoctorId - 添加评价: " + review.getReviewId() + ", 医生: " + review.getDoctorName());
+            } else {
+                System.out.println("ReviewServiceImpl.getReviewsByDoctorId - 跳过重复评价: " + review.getReviewId());
+            }
+        }
+
+        System.out.println("ReviewServiceImpl.getReviewsByDoctorId - 去重后的评价数量: " + uniqueReviews.size());
+
+        // 返回去重后的评价列表
+        return new ArrayList<>(uniqueReviews.values());
     }
 
 }

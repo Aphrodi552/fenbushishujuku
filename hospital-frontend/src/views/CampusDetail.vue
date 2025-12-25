@@ -179,7 +179,7 @@ const currentCampus = computed(() => {
       desc: '正在加载院区信息...',
       address: '',
       phone: '',
-      image: '',
+      image: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?q=80&w=1173&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
       paragraphs: []
     };
   }
@@ -189,7 +189,7 @@ const currentCampus = computed(() => {
     desc: '暂无该院区详细介绍信息。',
     address: '未知',
     phone: '--',
-    image: '',
+    image: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?q=80&w=1173&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     paragraphs: []
   };
 });

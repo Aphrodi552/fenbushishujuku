@@ -30,3 +30,23 @@ export function loginApi(data) {
     data
   });
 }
+
+/**
+ * 注册接口
+ * @param {object} data 包含注册所需信息的对象
+ * @returns Promise
+ */
+export function registerApi(data) {
+  /*
+    data 的预期结构:
+    {
+      userPhone: '用户的手机号',
+      userPassword: '用户的密码'
+    }
+  */
+  return request({
+    url: '/api/auth/register',
+    method: 'post',
+    data
+  });
+}

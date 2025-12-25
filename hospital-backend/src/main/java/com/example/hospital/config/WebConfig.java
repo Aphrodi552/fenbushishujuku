@@ -31,6 +31,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/hospitals/**",   // 放行医院相关接口
                         "/api/doctors/**",     // 放行医生相关接口
                         "/api/schedules/**",   // 放行排班相关接口
+                        "/api/reviews/doctor/**", // 放行根据医生ID获取评价接口（公开接口）
                         "/error"               // 放行错误页面
                 );
     }

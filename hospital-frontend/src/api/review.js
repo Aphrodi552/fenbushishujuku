@@ -17,3 +17,19 @@ export function getReviewByAppointmentId(appointmentId) {
   });
 }
 
+// 获取当前用户的所有评价
+export function getMyReviews() {
+  return request({
+    url: '/api/reviews',
+    method: 'get'
+  });
+}
+
+// 根据医生ID获取该医生的所有评价（公开接口，不需要登录）
+export function getReviewsByDoctorId(doctorId) {
+  return request({
+    url: `/api/reviews/doctor/${doctorId}`,
+    method: 'get'
+  });
+}
+

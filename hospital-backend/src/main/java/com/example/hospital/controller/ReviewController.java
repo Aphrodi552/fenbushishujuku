@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 评价控制器
@@ -58,6 +59,53 @@ public class ReviewController {
             return Result.error("未找到该预约的评价信息");
         }
         return Result.success(review);
+    }
+
+    /**
+     * 获取当前登录用户的所有评价
+     * @param request HttpServletRequest，用于获取用户ID
+     * @return 评价列表
+     */
+    @GetMapping
+    public Result<List<ReviewResponse>> getMyReviews(HttpServletRequest request) {
+        String userId = (String) request.getAttribute("userId");
+        System.out.println("ReviewController.getMyReviews - 从request获取的userId: " + userId);
+
+        if (userId == null || userId.isEmpty()) {
+            System.err.println("错误：userId为空，无法获取评价列表");
+            return Result.error("用户身份验证失败，请重新登录");
+        }
+
+        try {
+            List<ReviewResponse> reviews = reviewService.getReviewsByUserId(userId);
+            return Result.success(reviews);
+        } catch (Exception e) {
+            System.err.println("获取评价列表异常: " + e.getMessage());
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 根据医生ID获取该医生的所有评价（公开接口，不需要登录）
+     * @param doctorId 医生ID
+     * @return 评价列表
+     */
+    @GetMapping("/doctor/{doctorId}")
+    @com.example.hospital.common.PassToken // 公开接口，不需要登录
+    public Result<List<ReviewResponse>> getReviewsByDoctorId(@PathVariable String doctorId) {
+        System.out.println("ReviewController.getReviewsByDoctorId - doctorId: " + doctorId);
+
+        if (doctorId == null || doctorId.isEmpty()) {
+            return Result.error("医生ID不能为空");
+        }
+
+        try {
+            List<ReviewResponse> reviews = reviewService.getReviewsByDoctorId(doctorId);
+            return Result.success(reviews);
+        } catch (Exception e) {
+            System.err.println("获取医生评价列表异常: " + e.getMessage());
+            return Result.error(e.getMessage());
+        }
     }
 }
 

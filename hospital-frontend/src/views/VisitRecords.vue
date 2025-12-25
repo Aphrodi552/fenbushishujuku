@@ -4,7 +4,7 @@
         <div class="header-inner">
           <div class="logo-group" @click="router.push('/user')">
             <span class="logo-icon">🏥</span>
-            <div class="logo-text"><h1>浙江省人民医院</h1><small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small></div>
+            <div class="logo-text"><h1>浙江工业大学健行医院</h1><small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small></div>
           </div>
           <div class="back-home" @click="router.push('/user')"><Icon icon="mdi:home" /> 返回首页</div>
         </div>
@@ -108,7 +108,7 @@
       </div>
   
       <footer class="app-footer">
-        <div class="footer-bottom-bar">Copyright © 2025 浙江省人民医院网站版权所有</div>
+        <div class="footer-bottom-bar">Copyright © 2025 浙江工业大学健行医院网站版权所有</div>
       </footer>
     </div>
   </template>

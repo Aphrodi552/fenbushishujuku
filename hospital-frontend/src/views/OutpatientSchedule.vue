@@ -6,7 +6,7 @@
           <div class="logo-group" @click="router.push('/user')">
             <span class="logo-icon">🏥</span>
             <div class="logo-text">
-              <h1>浙江省人民医院</h1>
+              <h1>浙江工业大学健行医院</h1>
               <small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small>
             </div>
           </div>
@@ -124,7 +124,7 @@
   
       <footer class="simple-footer">
         <div class="footer-inner">
-          <p>Copyright © 2025 浙江省人民医院 | 浙ICP备06015436号</p>
+          <p>Copyright © 2025 浙江工业大学健行医院 | 浙ICP备06015436号</p>
           <p>技术支持：杭州梦智能科技有限公司</p>
         </div>
       </footer>

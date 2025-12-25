@@ -1,5 +1,6 @@
 package com.example.hospital.service;
 
+import com.example.hospital.dto.ChangePasswordRequest;
 import com.example.hospital.dto.UserProfileUpdateRequest;
 import com.example.hospital.entity.User;
 
@@ -22,6 +23,14 @@ public interface UserService {
      * @return 更新后的用户实体
      */
     User updateUserProfile(String userId, UserProfileUpdateRequest request);
+
+    /**
+     * 修改用户密码
+     * @param userId 用户ID
+     * @param request 修改密码请求体（包含旧密码和新密码）
+     * @return true if password changed successfully
+     */
+    boolean changePassword(String userId, ChangePasswordRequest request);
 
 }
 

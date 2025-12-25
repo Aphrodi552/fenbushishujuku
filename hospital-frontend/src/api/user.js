@@ -18,3 +18,12 @@ export function updateUserProfile(data) {
   });
 }
 
+// 修改用户密码
+export function changePassword(data) {
+  return request({
+    url: '/api/user/password',
+    method: 'put',
+    data: data
+  });
+}
+
