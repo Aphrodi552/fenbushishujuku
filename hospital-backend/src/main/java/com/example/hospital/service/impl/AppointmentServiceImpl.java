@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
@@ -230,13 +231,24 @@ public class AppointmentServiceImpl implements AppointmentService {
         }
 
         try {
-            // 前端格式：2025/12/25 23:54:26，需要转换为标准格式
+            // 前端发送的是浏览器本地时间字符串（格式：2025/12/25 23:54:26）
+            // 我们假设前端发送的是用户的本地时间（通常是Asia/Shanghai时区）
             String standardFormat = timeStr.replace("/", "-");
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            return LocalDateTime.parse(standardFormat, formatter);
+
+            // 解析为LocalDateTime（表示本地时间）
+            LocalDateTime localTime = LocalDateTime.parse(standardFormat, formatter);
+
+            // 转换为ZonedDateTime，指定为Asia/Shanghai时区
+            ZonedDateTime zonedTime = localTime.atZone(java.time.ZoneId.of("Asia/Shanghai"));
+
+            // 转换为UTC时间存储到数据库
+            return zonedTime.withZoneSameInstant(java.time.ZoneId.of("UTC")).toLocalDateTime();
+
         } catch (Exception e) {
-            log.error("解析时间字符串失败: {}", timeStr, e);
-            return LocalDateTime.now();
+            log.error("解析时间字符串失败: {}, 使用当前时间", timeStr, e);
+            // 返回当前UTC时间
+            return LocalDateTime.now(java.time.ZoneOffset.UTC);
         }
     }
 

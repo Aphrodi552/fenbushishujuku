@@ -67,7 +67,7 @@ const currentTitle = computed(() => route.meta?.title || '工作台')
 
 const menuItems = [
   { id: 'dashboard', name: '今日接诊', icon: 'mdi:monitor-dashboard', routeName: 'DoctorOverview' },
-  { id: 'schedule', name: '排班管理', icon: 'mdi:calendar-clock', routeName: 'DoctorSchedule' },
+  { id: 'schedule', name: '我的排班', icon: 'mdi:calendar-clock', routeName: 'DoctorSchedule' },
   { id: 'records', name: '病历档案', icon: 'mdi:file-document-outline', routeName: 'DoctorRecords' },
   { id: 'profile', name: '个人信息', icon: 'mdi:account-cog-outline', routeName: 'DoctorProfile' },
 ]
@@ -95,7 +95,6 @@ function handleLogout() {
 </script>
 
 <style scoped>
-/* 保持你现有 DoctorDashboard 的整体风格不变，只做最小改造 */
 .doctor-layout {
   display: flex;
   height: 100vh;
