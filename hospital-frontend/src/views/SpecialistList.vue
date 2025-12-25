@@ -23,37 +23,67 @@
     <div class="campus-tabs-bar">
       <div class="tabs-inner">
         <div class="tabs-list">
-          <div v-for="campus in ['朝晖院区', '望江山院区', '越城院区']" :key="campus" class="tab-item" :class="{ active: activeCampus === campus }" @click="activeCampus = campus">
+          <div v-for="campus in ['朝晖院区', '屏峰院区']" :key="campus" class="tab-item" :class="{ active: activeCampus === campus }" @click="activeCampus = campus">
             {{ campus }}<div class="triangle" v-if="activeCampus === campus"></div>
           </div>
         </div>
         <div class="tab-search-box">
-          <div class="input-inner"><Icon icon="mdi:magnify" class="search-icon" /><input type="text" placeholder="请输入专家姓名" /></div><button class="btn-tab-search">搜索</button>
+          <div class="input-inner">
+            <Icon icon="mdi:magnify" class="search-icon" />
+            <input 
+              type="text" 
+              placeholder="请输入专家姓名" 
+              v-model="searchKeyword"
+              @keyup.enter="handleSearch"
+            />
+          </div>
+          <button class="btn-tab-search" @click="handleSearch">搜索</button>
         </div>
       </div>
     </div>
 
     <main class="main-content">
       <div class="content-container">
-        <div class="dept-section" v-for="dept in departmentList" :key="dept.id">
-          <div class="dept-header">
-            <div class="dept-info"><h2 class="dept-title-border">{{ dept.name }}</h2><p class="dept-desc">{{ dept.desc }}</p></div>
-            <div class="see-more">查看更多 <Icon icon="mdi:arrow-right-thin" /></div>
-          </div>
-          <div class="doctor-grid">
-            <div class="doctor-card" v-for="doc in dept.doctors" :key="doc.name">
-              <div class="doc-photo"><img :src="doc.photo" :alt="doc.name"></div>
-              <div class="doc-info">
-                <div class="doc-top"><span class="doc-name">{{ doc.name }}</span><span class="doc-title">{{ doc.title }}</span></div>
-                <div class="doc-dept">{{ dept.name }}</div>
-                <div class="doc-skill"><span class="label">擅长：</span>{{ doc.skill }}</div>
-                <div class="doc-action">
-                  <button class="btn-see-reviews" @click="openReviews(doc.name)">
-                    <Icon icon="mdi:comment-quote-outline" /> 查看评价
-                  </button>
+        <div v-if="loading" class="loading-state">
+          <p>加载中...</p>
+        </div>
+        <div v-else>
+          <div class="dept-section" v-for="dept in departmentList" :key="dept.departmentId">
+            <div class="dept-header">
+              <div class="dept-info">
+                <h2 class="dept-title-border">{{ dept.departmentName }}</h2>
+                <p class="dept-desc">{{ dept.departmentIntro || '暂无介绍' }}</p>
+              </div>
+              <div class="see-more">查看更多 <Icon icon="mdi:arrow-right-thin" /></div>
+            </div>
+            <div class="doctor-grid" v-if="dept.doctors && dept.doctors.length > 0">
+              <div class="doctor-card" v-for="doc in dept.doctors" :key="doc.doctorId || doc.name">
+                <div class="doc-photo">
+                  <img :src="doc.photo" :alt="doc.name" @error="handleImageError">
+                </div>
+                <div class="doc-info">
+                  <div class="doc-top">
+                    <span class="doc-name">{{ doc.name }}</span>
+                    <span class="doc-title">{{ doc.title }}</span>
+                  </div>
+                  <div class="doc-dept">{{ dept.departmentName }}</div>
+                  <div class="doc-skill">
+                    <span class="label">擅长：</span>{{ doc.skill || '暂无' }}
+                  </div>
+                  <div class="doc-action">
+                    <button class="btn-see-reviews" @click="openReviews(doc.name)">
+                      <Icon icon="mdi:comment-quote-outline" /> 查看评价
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
+            <div v-else class="no-doctors">
+              <p>该科室暂无医生</p>
+            </div>
+          </div>
+          <div v-if="departmentList.length === 0 && !loading" class="empty-state">
+            <p>暂无科室信息</p>
           </div>
         </div>
       </div>
@@ -93,15 +123,29 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
+import { getDoctors } from '../api/doctor';
+import { getDepartmentList } from '../api/hospital';
 
 const router = useRouter();
 const activeCampus = ref('朝晖院区');
+const searchKeyword = ref('');
 const showReviewModal = ref(false);
 const currentDoctorName = ref('');
 const allReviews = ref([]);
+const loading = ref(false);
+
+// 院区ID映射
+const campusIdMap = {
+  '朝晖院区': '1',
+  '屏峰院区': '2'
+};
+
+// 科室列表和医生数据
+const departmentList = ref([]);
+const allDoctors = ref([]);
 
 // 打开评价弹窗
 const openReviews = (doctorName) => {
@@ -117,24 +161,108 @@ const currentDoctorReviews = computed(() => {
   return allReviews.value.filter(r => r.doctorName === currentDoctorName.value);
 });
 
-const departmentList = [
-  {
-    id: 1, name: '急诊医学科', desc: '专业优势：严重多发伤、重症急性胰腺炎、心肺脑复苏等。',
-    doctors: [
-      { name: '蔡文伟', title: '主任医师', photo: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=200&auto=format&fit=crop', skill: '急性腹痛、严重多发伤、急性胰腺炎...' },
-      { name: '李茜', title: '主任医师', photo: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=200&auto=format&fit=crop', skill: '各种重症疾病如多脏器功能衰竭...' },
-      { name: '郑悦亮', title: '主任医师', photo: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?q=80&w=200&auto=format&fit=crop', skill: '危重患者的诊治，对重症胰腺炎...' },
-      { name: '张可', title: '副主任医师', photo: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=200&auto=format&fit=crop', skill: '危重患者的诊治，对心脏骤停的抢救...' }
-    ]
-  },
-  {
-    id: 2, name: '重症医学科', desc: '专业优势：集急性肾损伤(AKI)的早期预警、诊断与治疗。',
-    doctors: [
-      { name: '杨向红', title: '主任医师', photo: 'https://images.unsplash.com/photo-1594824476969-519478cae374?q=80&w=200&auto=format&fit=crop', skill: '各种急危重病人的抢救治疗...' },
-      { name: '孙仁华', title: '主任医师', photo: 'https://images.unsplash.com/photo-1612531386530-97286d74c2ea?q=80&w=200&auto=format&fit=crop', skill: '各种急重病人的诊治...' }
-    ]
+// 加载科室列表
+const loadDepartments = async () => {
+  const hospitalId = campusIdMap[activeCampus.value];
+  if (!hospitalId) return;
+  
+  try {
+    const res = await getDepartmentList(hospitalId);
+    if (res.code === 200 && res.data) {
+      departmentList.value = res.data.map(dept => ({
+        ...dept,
+        doctors: []
+      }));
+    }
+  } catch (error) {
+    console.error('获取科室列表失败:', error);
+    departmentList.value = [];
   }
-];
+};
+
+// 加载医生列表
+const loadDoctors = async () => {
+  loading.value = true;
+  const hospitalId = campusIdMap[activeCampus.value];
+  if (!hospitalId) {
+    loading.value = false;
+    return;
+  }
+  
+  try {
+    const keyword = searchKeyword.value && searchKeyword.value.trim() 
+      ? searchKeyword.value.trim() 
+      : null;
+    
+    const res = await getDoctors(hospitalId, null, keyword);
+    if (res.code === 200 && res.data) {
+      allDoctors.value = res.data;
+      // 按科室分组
+      groupDoctorsByDepartment();
+    } else {
+      allDoctors.value = [];
+      departmentList.value.forEach(dept => {
+        dept.doctors = [];
+      });
+    }
+  } catch (error) {
+    console.error('获取医生列表失败:', error);
+    allDoctors.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 按科室分组医生
+const groupDoctorsByDepartment = () => {
+  // 为每个科室分配医生
+  departmentList.value.forEach(dept => {
+    // 如果医生有 departmentId，按科室过滤；否则显示所有医生
+    if (allDoctors.value.length > 0 && allDoctors.value[0].departmentId) {
+      dept.doctors = allDoctors.value
+        .filter(doctor => doctor.departmentId === dept.departmentId)
+        .map(doctor => ({
+          doctorId: doctor.doctorId,
+          name: doctor.doctorName,
+          title: doctor.title || '医师',
+          photo: doctor.avatarUrl || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=200&auto=format&fit=crop',
+          skill: doctor.doctorIntro || '暂无介绍'
+        }));
+    } else {
+      // 暂时将所有医生都显示，因为医生表中没有 departmentId
+      dept.doctors = allDoctors.value.map(doctor => ({
+        doctorId: doctor.doctorId,
+        name: doctor.doctorName,
+        title: doctor.title || '医师',
+        photo: doctor.avatarUrl || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=200&auto=format&fit=crop',
+        skill: doctor.doctorIntro || '暂无介绍'
+      }));
+    }
+  });
+};
+
+// 搜索处理
+const handleSearch = () => {
+  loadDoctors();
+};
+
+// 处理图片加载错误
+const handleImageError = (event) => {
+  event.target.src = 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=200&auto=format&fit=crop';
+};
+
+// 监听院区切换
+watch(activeCampus, () => {
+  searchKeyword.value = '';
+  loadDepartments();
+  loadDoctors();
+});
+
+// 组件挂载时加载数据
+onMounted(() => {
+  loadDepartments();
+  loadDoctors();
+});
 </script>
 
 <style scoped>
@@ -198,6 +326,44 @@ const departmentList = [
 .rev-time { margin-left: auto; font-size: 0.8rem; color: #999; }
 .rev-content { color: #555; font-size: 0.95rem; line-height: 1.5; }
 .app-footer { background: #1a3a6e; color: rgba(255,255,255,0.6); text-align: center; padding: 20px; margin-top: 50px; }
+
+/* 加载和空状态 */
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+  font-size: 1.1rem;
+}
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #999;
+}
+.no-doctors {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  background: #fcfcfc;
+}
+
+/* 加载和空状态 */
+.loading-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+  font-size: 1.1rem;
+}
+.empty-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: #999;
+}
+.no-doctors {
+  text-align: center;
+  padding: 40px 20px;
+  color: #999;
+  background: #fcfcfc;
+}
 </style>
 
 <!-- <template>

@@ -7,8 +7,12 @@ import com.example.hospital.dto.AddPatientRequest;
 import com.example.hospital.dto.PatientResponse;
 import com.example.hospital.entity.Patient;
 import com.example.hospital.entity.UserPatient;
+import com.example.hospital.entity.User;
 import com.example.hospital.mapper.PatientMapper;
+import com.example.hospital.mapper.UserMapper;
 import com.example.hospital.mapper.UserPatientMapper;
+import com.example.hospital.common.BusinessException;
+import com.example.hospital.common.ResultCode;
 import com.example.hospital.service.PatientService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,6 +33,9 @@ public class PatientServiceImpl implements PatientService {
 
     @Autowired
     private UserPatientMapper userPatientMapper;
+
+    @Autowired
+    private UserMapper userMapper;
 
     @Override
     public List<PatientResponse> getPatientsByUserId(String userId) {
@@ -72,45 +79,93 @@ public class PatientServiceImpl implements PatientService {
     @Override
     @Transactional // 开启事务管理
     public PatientResponse addPatientForUser(String userId, AddPatientRequest request) {
-        // 1. 检查该身份证号是否已存在
-        Patient existingPatient = patientMapper.selectOne(
-                new QueryWrapper<Patient>().eq("patient_idcard", request.getIdCard())
-        );
-
-        Patient targetPatient;
-
-        if (existingPatient != null) {
-            // 2a. 如果患者已存在，检查是否已与当前用户关联
-            // 注意：UserPatient 使用复合主键，必须使用 QueryWrapper，不能使用 getById
-            UserPatient link = userPatientMapper.selectOne(
-                    new LambdaQueryWrapper<UserPatient>()
-                            .eq(UserPatient::getUserId, userId)
-                            .eq(UserPatient::getPatientId, existingPatient.getPatientId())
+        // 1. 验证身份证号唯一性（不能与其他病患相同）
+        if (request.getIdCard() != null && !request.getIdCard().trim().isEmpty()) {
+            Patient existingByIdCard = patientMapper.selectOne(
+                    new LambdaQueryWrapper<Patient>()
+                            .eq(Patient::getPatientIdcard, request.getIdCard().trim())
             );
-            if (link != null) {
-                throw new RuntimeException("该就诊人已添加，请勿重复操作");
+            if (existingByIdCard != null) {
+                // 检查是否已与当前用户关联
+                UserPatient existingLink = userPatientMapper.selectOne(
+                        new LambdaQueryWrapper<UserPatient>()
+                                .eq(UserPatient::getUserId, userId)
+                                .eq(UserPatient::getPatientId, existingByIdCard.getPatientId())
+                );
+                if (existingLink != null) {
+                    throw new BusinessException(ResultCode.BUSINESS_ERROR, "该就诊人已添加，请勿重复操作");
+                }
+                // 如果已存在但未关联，使用现有患者（不验证手机号，因为身份证号已确定身份）
+                Patient targetPatient = existingByIdCard;
+                
+                // 创建用户与就诊人的关联关系
+                UserPatient newUserPatientLink = new UserPatient();
+                newUserPatientLink.setUserId(userId);
+                newUserPatientLink.setPatientId(targetPatient.getPatientId());
+                newUserPatientLink.setRelationType(request.getRelation());
+                userPatientMapper.insert(newUserPatientLink);
+                
+                // 组装并返回结果
+                PatientResponse response = new PatientResponse();
+                response.setPatientId(targetPatient.getPatientId());
+                response.setName(targetPatient.getPatientName());
+                response.setDob(targetPatient.getPatientBirthday());
+                response.setGender(targetPatient.getPatientGender());
+                response.setIdCard(targetPatient.getPatientIdcard());
+                response.setPhone(targetPatient.getPatientPhone());
+                response.setRelation(request.getRelation());
+                return response;
             }
-            targetPatient = existingPatient;
-        } else {
-            // 2b. 如果患者不存在，则创建新患者
-            targetPatient = new Patient();
-            targetPatient.setPatientId(UUID.randomUUID().toString());
-            targetPatient.setPatientName(request.getName());
-            targetPatient.setPatientIdcard(request.getIdCard());
-            targetPatient.setPatientPhone(request.getPhone());
-            targetPatient.setPatientBirthday(request.getDob());
-            targetPatient.setPatientGender(request.getGender());
-            patientMapper.insert(targetPatient);
         }
+        
+        // 2. 验证手机号唯一性（不能与其他病患相同，仅在创建新患者时验证）
+        if (request.getPhone() != null && !request.getPhone().trim().isEmpty()) {
+            Patient existingByPhone = patientMapper.selectOne(
+                    new LambdaQueryWrapper<Patient>()
+                            .eq(Patient::getPatientPhone, request.getPhone().trim())
+            );
+            if (existingByPhone != null) {
+                throw new BusinessException(ResultCode.BUSINESS_ERROR, "该手机号已被其他病患使用");
+            }
+        }
+        
+        // 3. 创建新患者
+        Patient targetPatient = new Patient();
+        targetPatient.setPatientId(UUID.randomUUID().toString());
+        targetPatient.setPatientName(request.getName());
+        targetPatient.setPatientIdcard(request.getIdCard());
+        targetPatient.setPatientPhone(request.getPhone());
+        targetPatient.setPatientBirthday(request.getDob());
+        targetPatient.setPatientGender(request.getGender());
+        patientMapper.insert(targetPatient);
 
-        // 3. 创建用户与就诊人的关联关系
+        // 4. 创建用户与就诊人的关联关系
         UserPatient newUserPatientLink = new UserPatient();
         newUserPatientLink.setUserId(userId);
         newUserPatientLink.setPatientId(targetPatient.getPatientId());
         newUserPatientLink.setRelationType(request.getRelation());
         userPatientMapper.insert(newUserPatientLink);
 
-        // 4. 组装并返回结果
+        // 5. 如果关系是"本人"，同步更新用户表的手机号
+        if ("本人".equals(request.getRelation()) && request.getPhone() != null && !request.getPhone().trim().isEmpty()) {
+            String newPhone = request.getPhone().trim();
+            // 验证新手机号是否已被其他用户使用（排除当前用户）
+            User existingUser = userMapper.selectByUserPhone(newPhone);
+            if (existingUser != null && !existingUser.getUserId().equals(userId)) {
+                // 如果手机号已被其他用户使用，回滚操作（事务会自动回滚）
+                throw new BusinessException(ResultCode.BUSINESS_ERROR, "该手机号已被其他用户使用，无法同步更新");
+            }
+            
+            // 更新用户表的手机号
+            User user = userMapper.selectById(userId);
+            if (user != null) {
+                user.setUserPhone(newPhone);
+                userMapper.updateById(user);
+                System.out.println("添加本人就诊人，同步更新用户表手机号: userId=" + userId + ", newPhone=" + newPhone);
+            }
+        }
+
+        // 6. 组装并返回结果
         PatientResponse response = new PatientResponse();
         BeanUtils.copyProperties(targetPatient, response);
         response.setPatientId(targetPatient.getPatientId());
@@ -135,16 +190,47 @@ public class PatientServiceImpl implements PatientService {
         );
         
         if (link == null) {
-            throw new RuntimeException("该就诊人不属于当前用户，无法修改");
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "该就诊人不属于当前用户，无法修改");
         }
 
         // 2. 获取就诊人信息
         Patient patient = patientMapper.selectById(patientId);
         if (patient == null) {
-            throw new RuntimeException("就诊人不存在");
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "就诊人不存在");
         }
 
-        // 3. 更新就诊人信息
+        // 3. 验证身份证号唯一性（不能与其他病患相同，排除当前就诊人）
+        if (request.getIdCard() != null && !request.getIdCard().trim().isEmpty()) {
+            String newIdCard = request.getIdCard().trim();
+            // 如果身份证号有变化，检查是否与其他病患重复
+            if (!newIdCard.equals(patient.getPatientIdcard())) {
+                Patient existingByIdCard = patientMapper.selectOne(
+                        new LambdaQueryWrapper<Patient>()
+                                .eq(Patient::getPatientIdcard, newIdCard)
+                );
+                if (existingByIdCard != null && !existingByIdCard.getPatientId().equals(patientId)) {
+                    throw new BusinessException(ResultCode.BUSINESS_ERROR, "该身份证号已被其他病患使用");
+                }
+            }
+        }
+        
+        // 4. 验证手机号唯一性（不能与其他病患相同，排除当前就诊人）
+        if (request.getPhone() != null && !request.getPhone().trim().isEmpty()) {
+            String newPhone = request.getPhone().trim();
+            // 如果手机号有变化，检查是否与其他病患重复
+            if (!newPhone.equals(patient.getPatientPhone())) {
+                Patient existingByPhone = patientMapper.selectOne(
+                        new LambdaQueryWrapper<Patient>()
+                                .eq(Patient::getPatientPhone, newPhone)
+                );
+                if (existingByPhone != null && !existingByPhone.getPatientId().equals(patientId)) {
+                    throw new BusinessException(ResultCode.BUSINESS_ERROR, "该手机号已被其他病患使用");
+                }
+            }
+        }
+        
+        // 5. 更新就诊人信息
+        String oldPhone = patient.getPatientPhone();
         patient.setPatientName(request.getName());
         patient.setPatientIdcard(request.getIdCard());
         patient.setPatientPhone(request.getPhone());
@@ -152,7 +238,8 @@ public class PatientServiceImpl implements PatientService {
         patient.setPatientGender(request.getGender());
         patientMapper.updateById(patient);
 
-        // 4. 更新关联关系（如果需要修改关系）
+        // 6. 更新关联关系（如果需要修改关系）
+        String finalRelation = link.getRelationType(); // 最终的关系类型
         if (request.getRelation() != null && !request.getRelation().equals(link.getRelationType())) {
             // 注意：UserPatient 是复合主键，不能使用 updateById
             // 使用 UpdateWrapper 更新非主键字段
@@ -167,11 +254,34 @@ public class PatientServiceImpl implements PatientService {
             );
             
             if (updateResult > 0) {
+                finalRelation = request.getRelation();
                 link.setRelationType(request.getRelation());
             }
         }
 
-        // 5. 组装并返回结果
+        // 7. 如果关系是"本人"，同步更新用户表的手机号
+        if ("本人".equals(finalRelation) && request.getPhone() != null && !request.getPhone().trim().isEmpty()) {
+            String newPhone = request.getPhone().trim();
+            // 如果手机号有变化，更新用户表
+            if (!newPhone.equals(oldPhone)) {
+                // 验证新手机号是否已被其他用户使用（排除当前用户）
+                User existingUser = userMapper.selectByUserPhone(newPhone);
+                if (existingUser != null && !existingUser.getUserId().equals(userId)) {
+                    // 如果手机号已被其他用户使用，回滚就诊人更新（事务会自动回滚）
+                    throw new BusinessException(ResultCode.BUSINESS_ERROR, "该手机号已被其他用户使用，无法同步更新");
+                }
+                
+                // 更新用户表的手机号
+                User user = userMapper.selectById(userId);
+                if (user != null) {
+                    user.setUserPhone(newPhone);
+                    userMapper.updateById(user);
+                    System.out.println("同步更新用户表手机号: userId=" + userId + ", oldPhone=" + oldPhone + ", newPhone=" + newPhone);
+                }
+            }
+        }
+
+        // 7. 组装并返回结果
         PatientResponse response = new PatientResponse();
         response.setPatientId(patient.getPatientId());
         response.setName(patient.getPatientName());
@@ -195,7 +305,7 @@ public class PatientServiceImpl implements PatientService {
         );
         
         if (link == null) {
-            throw new RuntimeException("该就诊人不属于当前用户，无法删除");
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "该就诊人不属于当前用户，无法删除");
         }
 
         // 2. 删除用户与就诊人的关联关系
@@ -207,7 +317,7 @@ public class PatientServiceImpl implements PatientService {
         );
 
         if (deleteResult <= 0) {
-            throw new RuntimeException("删除关联关系失败");
+            throw new BusinessException(ResultCode.BUSINESS_ERROR, "删除关联关系失败");
         }
 
         // 注意：这里只删除关联关系，不删除 patient 表中的数据

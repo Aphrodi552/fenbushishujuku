@@ -29,6 +29,7 @@ public class WebConfig implements WebMvcConfigurer {
                         "/api/hospital/departments/**", // 放行科室详情接口（包含所有子路径）
                         "/api/hospital/list",  // 放行医院列表接口
                         "/api/hospitals/**",   // 放行医院相关接口
+                        "/api/doctors/**",     // 放行医生相关接口
                         "/error"               // 放行错误页面
                 );
     }
