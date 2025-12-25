@@ -41,6 +41,11 @@ public class DoctorServiceImpl implements DoctorService {
             queryWrapper.eq(Doctor::getHospitalId, hospitalId);
         }
         
+        // 按科室筛选（通过医生的 departmentId 字段）
+        if (departmentId != null && !departmentId.trim().isEmpty()) {
+            queryWrapper.eq(Doctor::getDepartmentId, departmentId);
+        }
+        
         // 按关键词搜索（医生姓名）
         if (keyword != null && !keyword.trim().isEmpty()) {
             queryWrapper.like(Doctor::getDoctorName, keyword.trim());
@@ -53,17 +58,28 @@ public class DoctorServiceImpl implements DoctorService {
             return Collections.emptyList();
         }
         
-        // 3. 获取所有医生的ID
-        List<String> doctorIds = doctors.stream()
-                .map(Doctor::getDoctorId)
+        // 3. 收集所有医生的科室ID，批量查询科室信息
+        List<String> departmentIds = doctors.stream()
+                .map(Doctor::getDepartmentId)
+                .filter(id -> id != null && !id.trim().isEmpty())
+                .distinct()
                 .collect(Collectors.toList());
         
-        // 4. 如果指定了科室ID，需要通过 schedule 表查询该科室的医生
-        // 注意：Schedule 表中没有 departmentId，所以这里先简化处理
-        // 如果后续数据库中有 doctor_department 关联表，可以在这里添加查询逻辑
+        // 批量查询科室信息
+        // 使用 final 确保在 Lambda 中可以安全访问
+        final Map<String, Department> departmentMap;
+        if (!departmentIds.isEmpty()) {
+            List<Department> departments = departmentMapper.selectBatchIds(departmentIds);
+            departmentMap = departments.stream()
+                    .collect(Collectors.toMap(Department::getDepartmentId, d -> d));
+        } else {
+            departmentMap = Collections.emptyMap();
+        }
         
-        // 5. 组装返回数据（先不关联科室，后续可以根据实际数据库结构调整）
-        List<DoctorResponse> doctorResponses = doctors.stream()
+        // 4. 组装返回数据
+        // 使用 final 确保在 Lambda 中可以安全访问 doctors
+        final List<Doctor> finalDoctors = doctors;
+        List<DoctorResponse> doctorResponses = finalDoctors.stream()
                 .map(doctor -> {
                     DoctorResponse response = new DoctorResponse();
                     BeanUtils.copyProperties(doctor, response);
@@ -76,12 +92,20 @@ public class DoctorServiceImpl implements DoctorService {
                     response.setDoctorIntro(doctor.getDoctorIntro());
                     response.setAvatarUrl(doctor.getAvatarUrl());
                     response.setHospitalId(doctor.getHospitalId());
+                    response.setDepartmentId(doctor.getDepartmentId());
+                    
+                    // 设置科室名称
+                    if (doctor.getDepartmentId() != null && !doctor.getDepartmentId().trim().isEmpty()) {
+                        Department department = departmentMap.get(doctor.getDepartmentId());
+                        if (department != null) {
+                            response.setDepartmentName(department.getDepartmentName());
+                        }
+                    }
+                    
                     return response;
                 })
                 .collect(Collectors.toList());
         
-        // 6. 如果指定了科室ID，需要通过其他方式过滤（暂时返回所有医生）
-        // TODO: 根据实际数据库结构调整科室关联逻辑
         return doctorResponses;
     }
 
@@ -103,9 +127,15 @@ public class DoctorServiceImpl implements DoctorService {
         response.setDoctorIntro(doctor.getDoctorIntro());
         response.setAvatarUrl(doctor.getAvatarUrl());
         response.setHospitalId(doctor.getHospitalId());
+        response.setDepartmentId(doctor.getDepartmentId());
         
-        // 查询医生所属科室（暂时不实现，因为 Schedule 表中没有 departmentId）
-        // TODO: 根据实际数据库结构调整科室关联逻辑
+        // 查询医生所属科室
+        if (doctor.getDepartmentId() != null && !doctor.getDepartmentId().trim().isEmpty()) {
+            Department department = departmentMapper.selectById(doctor.getDepartmentId());
+            if (department != null) {
+                response.setDepartmentName(department.getDepartmentName());
+            }
+        }
         
         return response;
     }

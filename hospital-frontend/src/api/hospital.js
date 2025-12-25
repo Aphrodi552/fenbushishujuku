@@ -37,3 +37,19 @@ export function getDepartmentDetail(departmentId) {
     method: 'get'
   });
 }
+
+// 获取所有医院/院区列表
+export function getHospitalList() {
+  return request({
+    url: '/api/hospitals',
+    method: 'get'
+  });
+}
+
+// 获取所有医院/院区列表（别名，与后端接口名称一致）
+export function getAllHospitals() {
+  return request({
+    url: '/api/hospitals',
+    method: 'get'
+  });
+}

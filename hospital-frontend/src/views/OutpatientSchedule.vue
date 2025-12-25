@@ -45,16 +45,16 @@
             </div>
   
             <div class="date-navigator">
-              <button class="btn-nav"><Icon icon="mdi:chevron-left" /></button>
-              <span class="date-range">2025.12.23 ~ 2025.12.29</span>
-              <button class="btn-nav"><Icon icon="mdi:chevron-right" /></button>
+              <button class="btn-nav" @click="prevWeek"><Icon icon="mdi:chevron-left" /></button>
+              <span class="date-range">{{ dateRangeText }}</span>
+              <button class="btn-nav" @click="nextWeek"><Icon icon="mdi:chevron-right" /></button>
             </div>
           </div>
   
           <div class="type-search-bar">
             <div class="type-tabs">
               <div 
-                v-for="t in ['名医门诊', '精英门诊', '专家门诊', '普通门诊']" 
+                v-for="t in ['全部门诊', '普通门诊', '专家门诊']" 
                 :key="t" 
                 class="type-btn"
                 :class="{ active: activeType === t }"
@@ -65,17 +65,29 @@
             </div>
             <div class="search-box">
               <Icon icon="mdi:magnify" class="search-icon"/>
-              <input type="text" placeholder="请输入疾病/科室名称" />
-              <button class="btn-search">搜索</button>
+              <input 
+                type="text" 
+                placeholder="请输入疾病/科室名称" 
+                v-model="searchKeyword"
+                @keyup.enter="handleSearch"
+              />
+              <button class="btn-search" @click="handleSearch">搜索</button>
             </div>
           </div>
   
           <div class="schedule-table-wrapper">
-            <table class="schedule-table">
+            <div v-if="loading" class="loading-state">
+              <Icon icon="mdi:loading" class="loading-icon" />
+              <p>加载中，请稍候...</p>
+            </div>
+            <div v-else-if="filteredScheduleData.length === 0" class="empty-state">
+              <Icon icon="mdi:information-outline" class="empty-icon" />
+              <p>当前筛选条件下暂无排班信息</p>
+            </div>
+            <table v-else class="schedule-table">
               <thead>
                 <tr>
                   <th style="width: 150px">科室</th>
-                  <th style="width: 150px">副科室</th>
                   <th style="width: 80px">时段</th>
                   <th v-for="(day, idx) in weekDays" :key="idx">
                     <div class="th-date">{{ day.date }}</div>
@@ -84,10 +96,9 @@
                 </tr>
               </thead>
               <tbody>
-                <template v-for="dept in scheduleData" :key="dept.id">
+                <template v-for="dept in filteredScheduleData" :key="dept.id">
                   <tr>
                     <td rowspan="2" class="col-dept">{{ dept.name }}</td>
-                    <td rowspan="2" class="col-sub-dept">{{ dept.subName }}</td>
                     <td class="col-period">上午</td>
                     <td v-for="(day, dIdx) in weekDays" :key="'am'+dIdx" class="col-doc">
                       <span v-if="getDoctor(dept, day.date, 'am')" class="doc-name">
@@ -121,85 +132,195 @@
   </template>
   
   <script setup>
-  import { ref } from 'vue';
+  import { ref, computed, onMounted, watch } from 'vue';
   import { useRouter } from 'vue-router';
   import { Icon } from '@iconify/vue';
+  import { getOutpatientSchedules } from '../api/schedule';
+  import { getAllHospitals } from '../api/hospital';
   
   const router = useRouter();
   const activeCampus = ref('朝晖院区');
-  const activeType = ref('名医门诊');
+  const activeType = ref('全部门诊');
+  const loading = ref(false);
+  const searchKeyword = ref('');
   
-  // 模拟一周日期
-  const weekDays = [
-    { date: '12.23', week: '周二' },
-    { date: '12.24', week: '周三' },
-    { date: '12.25', week: '周四' },
-    { date: '12.26', week: '周五' },
-    { date: '12.27', week: '周六' },
-    { date: '12.28', week: '周日' },
-    { date: '12.29', week: '周一' },
-  ];
+  // 院区ID映射
+  const campusIdMap = {
+    '朝晖院区': '1',
+    '屏峰院区': '2'
+  };
   
-  // 模拟排班数据
-  const scheduleData = [
-    {
-      id: 1,
-      name: '心血管内科',
-      subName: '心血管内科',
-      schedule: {
-        '12.25': { am: '王长华' },
-        '12.24': { pm: '沈乃吉' },
-        '12.26': { pm: '沈乃吉' }
-      }
-    },
-    {
-      id: 2,
-      name: '呼吸内科',
-      subName: '呼吸内科',
-      schedule: {
-        '12.26': { am: '叶飘' },
-        '12.23': { pm: '许武林' },
-        '12.24': { pm: '陈淳' }
-      }
-    },
-    {
-      id: 3,
-      name: '内分泌科',
-      subName: '内分泌科',
-      schedule: {
-        '12.23': { pm: '邢玉波' },
-        '12.24': { pm: '宋迎香' },
-        '12.25': { pm: '宋迎香' },
-        '12.27': { am: '马江波', pm: '吴晖' },
-        '12.28': { pm: '王丽君' }
-      }
-    },
-    {
-      id: 4,
-      name: '肿瘤内科',
-      subName: '肿瘤内科',
-      schedule: {
-        '12.23': { pm: '杨柳' }
-      }
-    },
-    {
-      id: 5,
-      name: '老年医学科',
-      subName: '高血压门诊',
-      schedule: {
-        '12.26': { pm: '朱霞' },
-        '12.27': { pm: '朱霞' }
-      }
+  // 门诊类型映射
+  const typeFilterMap = {
+    '全部门诊': 'all',
+    '普通门诊': 'normal',
+    '专家门诊': 'expert'
+  };
+  
+  // 当前日期范围（默认未来7天）
+  const currentWeekStart = ref(new Date());
+  const weekDays = ref([]);
+  
+  // 排班数据
+  const scheduleData = ref([]);
+  
+  // 生成一周日期
+  const generateWeekDays = () => {
+    const days = [];
+    const start = new Date(currentWeekStart.value);
+    const weekdays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      days.push({
+        date: `${month}.${day}`,
+        fullDate: `${date.getFullYear()}-${month}-${day}`,
+        week: weekdays[date.getDay()],
+        dateObj: date
+      });
     }
-  ];
+    weekDays.value = days;
+  };
+  
+  // 加载排班数据
+  const loadSchedules = async () => {
+    const hospitalId = campusIdMap[activeCampus.value];
+    if (!hospitalId) {
+      scheduleData.value = [];
+      return;
+    }
+    
+    loading.value = true;
+    try {
+      const titleFilter = typeFilterMap[activeType.value] || 'all';
+      const startDate = weekDays.value.length > 0 ? weekDays.value[0].fullDate : null;
+      const endDate = weekDays.value.length > 0 ? weekDays.value[weekDays.value.length - 1].fullDate : null;
+      
+      const res = await getOutpatientSchedules(hospitalId, titleFilter, startDate, endDate);
+      console.log('门诊排班API响应:', res);
+      
+      if (res.code === 200 && res.data) {
+        // 转换数据格式以匹配前端显示
+        scheduleData.value = res.data.map(dept => {
+          // 为每个科室构建排班数据结构
+          const scheduleMap = {};
+          
+          // 遍历该科室的所有医生（如果有的话）
+          if (dept.doctors && dept.doctors.length > 0) {
+            dept.doctors.forEach(doctor => {
+              if (doctor.scheduleMap) {
+                Object.keys(doctor.scheduleMap).forEach(dateKey => {
+                  if (!scheduleMap[dateKey]) {
+                    scheduleMap[dateKey] = { am: '', pm: '' };
+                  }
+                  
+                  const timeSlots = doctor.scheduleMap[dateKey];
+                  timeSlots.forEach(slot => {
+                    if (slot.period === 'am' && slot.isAvailable) {
+                      // 如果有多个医生，用逗号分隔
+                      if (scheduleMap[dateKey].am) {
+                        scheduleMap[dateKey].am += `、${doctor.doctorName}`;
+                      } else {
+                        scheduleMap[dateKey].am = doctor.doctorName;
+                      }
+                    } else if (slot.period === 'pm' && slot.isAvailable) {
+                      if (scheduleMap[dateKey].pm) {
+                        scheduleMap[dateKey].pm += `、${doctor.doctorName}`;
+                      } else {
+                        scheduleMap[dateKey].pm = doctor.doctorName;
+                      }
+                    }
+                  });
+                });
+              }
+            });
+          }
+          // 如果没有医生，scheduleMap 为空对象，科室仍然会显示
+          
+          return {
+            id: dept.departmentId,
+            name: dept.departmentName,
+            subName: dept.departmentName,
+            schedule: scheduleMap
+          };
+        });
+        
+        console.log('转换后的排班数据:', scheduleData.value);
+      } else {
+        console.error('获取门诊排班失败:', res.message);
+        scheduleData.value = [];
+      }
+    } catch (error) {
+      console.error('获取门诊排班失败:', error);
+      scheduleData.value = [];
+    } finally {
+      loading.value = false;
+    }
+  };
   
   // 辅助函数：获取医生名字
   const getDoctor = (dept, dateStr, period) => {
-    if (dept.schedule[dateStr] && dept.schedule[dateStr][period]) {
+    if (dept.schedule && dept.schedule[dateStr] && dept.schedule[dateStr][period]) {
       return dept.schedule[dateStr][period];
     }
     return '';
   };
+  
+  // 日期导航
+  const prevWeek = () => {
+    const newDate = new Date(currentWeekStart.value);
+    newDate.setDate(newDate.getDate() - 7);
+    currentWeekStart.value = newDate;
+    generateWeekDays();
+    loadSchedules();
+  };
+  
+  const nextWeek = () => {
+    const newDate = new Date(currentWeekStart.value);
+    newDate.setDate(newDate.getDate() + 7);
+    currentWeekStart.value = newDate;
+    generateWeekDays();
+    loadSchedules();
+  };
+  
+  // 格式化日期范围显示
+  const dateRangeText = computed(() => {
+    if (weekDays.value.length === 0) return '';
+    const start = weekDays.value[0];
+    const end = weekDays.value[weekDays.value.length - 1];
+    return `${start.dateObj.getFullYear()}.${String(start.dateObj.getMonth() + 1).padStart(2, '0')}.${String(start.dateObj.getDate()).padStart(2, '0')} ~ ${end.dateObj.getFullYear()}.${String(end.dateObj.getMonth() + 1).padStart(2, '0')}.${String(end.dateObj.getDate()).padStart(2, '0')}`;
+  });
+  
+  // 搜索功能
+  const handleSearch = () => {
+    // 前端筛选已在 computed 中实现
+  };
+  
+  // 筛选后的数据
+  const filteredScheduleData = computed(() => {
+    if (!searchKeyword.value || !searchKeyword.value.trim()) {
+      return scheduleData.value;
+    }
+    const keyword = searchKeyword.value.trim().toLowerCase();
+    return scheduleData.value.filter(dept => 
+      dept.name.toLowerCase().includes(keyword) || 
+      dept.subName.toLowerCase().includes(keyword)
+    );
+  });
+  
+  // 监听院区和类型变化
+  watch([activeCampus, activeType], () => {
+    loadSchedules();
+  });
+  
+  // 初始化
+  onMounted(() => {
+    generateWeekDays();
+    loadSchedules();
+  });
   </script>
   
   <style scoped>
@@ -265,4 +386,10 @@
   
   /* Footer */
   .simple-footer { background: #1a3a6e; padding: 40px 0; color: rgba(255,255,255,0.6); font-size: 0.85rem; text-align: center; margin-top: 50px; }
+  
+  /* 加载和空状态 */
+  .loading-state, .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+  .loading-icon { font-size: 3rem; animation: spin 1s linear infinite; margin-bottom: 15px; color: #2f80ed; }
+  .empty-icon { font-size: 3rem; margin-bottom: 15px; color: #ccc; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
   </style>

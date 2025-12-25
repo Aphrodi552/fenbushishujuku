@@ -41,21 +41,25 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-if="filteredList.length === 0"><td colspan="8" class="empty-cell"><div class="empty-box"><Icon icon="mdi:database-off" class="empty-icon" /><p>暂无相关记录</p></div></td></tr>
-                <tr v-for="item in filteredList" :key="item.recordId">
+                <tr v-if="loading"><td colspan="8" class="empty-cell"><div class="empty-box"><Icon icon="mdi:loading" class="empty-icon" /><p>加载中...</p></div></td></tr>
+                <tr v-else-if="filteredList.length === 0"><td colspan="8" class="empty-cell"><div class="empty-box"><Icon icon="mdi:database-off" class="empty-icon" /><p>暂无相关记录</p></div></td></tr>
+                <tr v-else v-for="item in filteredList" :key="item.recordId">
                   <td class="col-id">{{ item.recordId }}</td>
-                  <td class="col-time">{{ item.visitTime }}</td>
+                  <td class="col-time">{{ item.visitTime }} {{ item.timeSlot || '' }}</td>
                   <td class="col-name">{{ item.patientName }}</td>
-                  <td class="col-doc">{{ item.doctorName }}</td>
+                  <td class="col-doc">{{ item.doctorName }} {{ item.doctorTitle ? `(${item.doctorTitle})` : '' }}</td>
                   <td class="col-id">{{ item.campusName }}</td>
-                  <td class="col-diag"><span class="diag-tag">{{ item.diagnosis }}</span></td>
+                  <td class="col-diag">
+                    <span class="diag-tag" v-if="item.diagnosis">{{ item.diagnosis }}</span>
+                    <span class="diag-tag" v-else style="background: #f0f0f0; color: #999;">待诊断</span>
+                  </td>
                   <td>
-                    <span v-if="hasReviewed(item.recordId)" class="status-reviewed"><Icon icon="mdi:check-circle" /> 已评价</span>
+                    <span v-if="hasReviewed(item)" class="status-reviewed"><Icon icon="mdi:check-circle" /> 已评价</span>
                     <span v-else class="status-pending">未评价</span>
                   </td>
                   <td>
-                    <button v-if="!hasReviewed(item.recordId)" class="btn-review" @click="openReviewModal(item)">去评价</button>
-                    <button v-else class="btn-link disabled">已完成</button>
+                    <button v-if="!hasReviewed(item)" class="btn-review" @click="openReviewModal(item)">去评价</button>
+                    <button v-else class="btn-link disabled">查看评价</button>
                   </td>
                 </tr>
               </tbody>
@@ -77,19 +81,28 @@
                   :icon="n <= reviewForm.rating ? 'mdi:star' : 'mdi:star-outline'" 
                   class="star-icon" 
                   :class="{ active: n <= reviewForm.rating }"
-                  @click="reviewForm.rating = n"
+                  @click="!currentReviewItem.review && (reviewForm.rating = n)"
+                  :style="{ cursor: currentReviewItem.review ? 'default' : 'pointer' }"
                 />
                 <span class="rating-text">{{ reviewForm.rating }}分</span>
               </div>
             </div>
             <div class="form-group">
               <label>评价内容：</label>
-              <textarea v-model="reviewForm.content" rows="4" placeholder="医生专业吗？服务态度好吗？请分享您的就医体验..."></textarea>
+              <textarea 
+                v-model="reviewForm.content" 
+                rows="4" 
+                placeholder="医生专业吗？服务态度好吗？请分享您的就医体验..."
+                :disabled="!!currentReviewItem.review"
+              ></textarea>
+            </div>
+            <div v-if="currentReviewItem.review" class="review-note">
+              <Icon icon="mdi:information-outline" /> 该就诊记录已评价，无法修改
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn-cancel" @click="closeReviewModal">取消</button>
-            <button class="btn-confirm" @click="submitReview">提交评价</button>
+            <button class="btn-cancel" @click="closeReviewModal">关闭</button>
+            <button v-if="!currentReviewItem.review" class="btn-confirm" @click="submitReview" :disabled="loading">提交评价</button>
           </div>
         </div>
       </div>
@@ -100,79 +113,157 @@
     </div>
   </template>
   
-  <script setup>
-  import { ref, computed, onMounted } from 'vue';
-  import { useRouter } from 'vue-router';
-  import { Icon } from '@iconify/vue';
-  
-  const router = useRouter();
-  const filters = ref({ patientName: '', date: '' });
-  const showReviewModal = ref(false);
-  const currentReviewItem = ref({});
-  const reviewForm = ref({ rating: 5, content: '' });
-  const myReviews = ref([]);
-  
-  // 模拟数据
-  const mockData = [
-    { recordId: 'REC-001', visitTime: '2025-01-01', patientName: '陆露露', doctorName: '蔡文伟', campusName: '朝晖院区', diagnosis: '急性肠胃炎' },
-    { recordId: 'REC-002', visitTime: '2024-12-15', patientName: '陆露露', doctorName: '李茜', campusName: '屏峰院区', diagnosis: '上呼吸道感染' },
-    { recordId: 'REC-003', visitTime: '2024-11-20', patientName: '张大爷', doctorName: '杨向红', campusName: '朝晖院区', diagnosis: '高血压复查' }
-  ];
-  
-  // 初始化：从 localStorage 读取已有评价
-  onMounted(() => {
-    const savedReviews = localStorage.getItem('hospital_reviews');
-    if (savedReviews) {
-      myReviews.value = JSON.parse(savedReviews);
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { Icon } from '@iconify/vue';
+import { getMyVisits } from '../api/visit';
+import { createReview, getReviewByAppointmentId } from '../api/review';
+
+const router = useRouter();
+const filters = ref({ patientName: '', date: '' });
+const showReviewModal = ref(false);
+const currentReviewItem = ref({});
+const reviewForm = ref({ rating: 5, content: '' });
+const myReviews = ref([]);
+const loading = ref(false);
+
+// 就诊记录列表
+const visitList = ref([]);
+
+// 加载就诊记录
+const loadVisits = async () => {
+  loading.value = true;
+  try {
+    const res = await getMyVisits();
+    console.log('就诊记录API响应:', res);
+    if (res.code === 200 && res.data) {
+      console.log('就诊记录数据:', res.data);
+      // 转换数据格式以匹配前端显示
+      visitList.value = res.data.map(visit => {
+        const visitTime = visit.visitTime ? 
+          (typeof visit.visitTime === 'string' ? visit.visitTime.split('T')[0] : visit.visitTime.toString().split('T')[0]) : '';
+        return {
+          visitId: visit.visitId,
+          appointmentId: visit.appointmentId,
+          recordId: visit.visitId, // 用于兼容现有代码
+          visitTime: visitTime,
+          patientName: visit.patientName || '未知',
+          doctorName: visit.doctorName || '未知',
+          doctorTitle: visit.doctorTitle || '',
+          campusName: visit.hospitalName || '未知院区',
+          diagnosis: visit.diagnosis || '待诊断',
+          timeSlot: visit.timeSlot || '',
+          review: visit.review // 评价信息
+        };
+      });
+      console.log('转换后的就诊记录列表:', visitList.value);
+    } else {
+      console.error('获取就诊记录失败:', res.message);
+      visitList.value = [];
     }
-  });
+  } catch (error) {
+    console.error('获取就诊记录失败:', error);
+    visitList.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 初始化
+onMounted(() => {
+  loadVisits();
+});
+
+// 检查是否已评价
+const hasReviewed = (item) => {
+  // 如果就诊记录中有评价信息，说明已评价
+  return item.review != null && item.review.reviewId != null;
+};
+
+const filteredList = computed(() => {
+  let result = visitList.value;
   
-  // 检查是否已评价
-  const hasReviewed = (recordId) => {
-    return myReviews.value.some(r => r.recordId === recordId);
-  };
+  // 按就诊人姓名筛选
+  if (filters.value.patientName && filters.value.patientName.trim()) {
+    result = result.filter(item => 
+      item.patientName.includes(filters.value.patientName.trim())
+    );
+  }
   
-  const filteredList = computed(() => {
-    return mockData.filter(item => item.patientName.includes(filters.value.patientName));
-  });
+  // 按日期筛选
+  if (filters.value.date) {
+    result = result.filter(item => item.visitTime === filters.value.date);
+  }
   
-  // 打开评价弹窗
-  const openReviewModal = (item) => {
-    currentReviewItem.value = item;
-    reviewForm.value = { rating: 5, content: '' };
-    showReviewModal.value = true;
-  };
-  
-  const closeReviewModal = () => showReviewModal.value = false;
-  
-  // 提交评价
-  const submitReview = () => {
-    if (!reviewForm.value.content) {
-      alert('请输入评价内容');
-      return;
-    }
-    
-    const newReview = {
-      id: Date.now(),
-      recordId: currentReviewItem.value.recordId,
-      doctorName: currentReviewItem.value.doctorName, // 关联医生
-      patientName: currentReviewItem.value.patientName,
-      rating: reviewForm.value.rating,
-      content: reviewForm.value.content,
-      time: new Date().toISOString().split('T')[0]
+  return result;
+});
+
+// 打开评价弹窗
+const openReviewModal = (item) => {
+  currentReviewItem.value = item;
+  // 如果已有评价，显示评价内容
+  if (item.review) {
+    reviewForm.value = { 
+      rating: item.review.rating || 5, 
+      content: item.review.content || '' 
     };
-  
-    myReviews.value.push(newReview);
-    // ★★★ 核心：保存到 localStorage ★★★
-    localStorage.setItem('hospital_reviews', JSON.stringify(myReviews.value));
-    
-    alert('评价提交成功！');
-    closeReviewModal();
-  };
-  
-  const handleSearch = () => {};
-  const resetSearch = () => { filters.value.patientName = ''; };
-  </script>
+  } else {
+    reviewForm.value = { rating: 5, content: '' };
+  }
+  showReviewModal.value = true;
+};
+
+const closeReviewModal = () => showReviewModal.value = false;
+
+// 提交评价
+const submitReview = async () => {
+  if (!reviewForm.value.content || !reviewForm.value.content.trim()) {
+    alert('请输入评价内容');
+    return;
+  }
+
+  // 如果已有评价，提示不能重复评价
+  if (currentReviewItem.value.review) {
+    alert('该就诊记录已评价，无法重复评价');
+    return;
+  }
+
+  loading.value = true;
+  try {
+    const res = await createReview({
+      appointmentId: currentReviewItem.value.appointmentId,
+      rating: reviewForm.value.rating,
+      content: reviewForm.value.content.trim()
+    });
+
+    if (res.code === 200 && res.data) {
+      alert('评价提交成功！');
+      // 更新当前项的评价信息
+      currentReviewItem.value.review = res.data;
+      // 重新加载就诊记录列表
+      await loadVisits();
+      closeReviewModal();
+    } else {
+      alert(res.message || '评价提交失败，请重试');
+    }
+  } catch (error) {
+    console.error('提交评价失败:', error);
+    alert(error.message || '评价提交失败，请检查网络连接');
+  } finally {
+    loading.value = false;
+  }
+};
+
+const handleSearch = () => {
+  // 搜索逻辑已在 computed 中实现
+};
+
+const resetSearch = () => { 
+  filters.value.patientName = ''; 
+  filters.value.date = '';
+};
+</script>
   
   <style scoped>
   /* 复用之前的 CSS 结构，新增评价相关样式 */
@@ -208,6 +299,7 @@
   .btn-review { background: #ff9800; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; transition: 0.2s; }
   .btn-review:hover { background: #f57c00; }
   .btn-link.disabled { color: #ccc; background: none; border: none; cursor: default; }
+  .review-note { margin-top: 15px; padding: 10px; background: #fff3cd; color: #856404; border-radius: 4px; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
   
   /* 弹窗样式 */
   .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; }
