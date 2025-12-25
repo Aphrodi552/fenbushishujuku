@@ -4,7 +4,7 @@
       <div class="stat-card blue-gradient">
         <div class="stat-info">
           <h3>待接诊</h3>
-          <span class="num">12</span>
+          <span class="num">{{ stats.waiting }}</span>
         </div>
         <Icon icon="mdi:account-clock" class="bg-icon" />
       </div>
@@ -12,7 +12,7 @@
       <div class="stat-card green-gradient">
         <div class="stat-info">
           <h3>已完成</h3>
-          <span class="num">28</span>
+          <span class="num">{{ stats.completed }}</span>
         </div>
         <Icon icon="mdi:account-check" class="bg-icon" />
       </div>
@@ -20,17 +20,17 @@
       <div class="stat-card orange-gradient">
         <div class="stat-info">
           <h3>今日挂号</h3>
-          <span class="num">45</span>
+          <span class="num">{{ stats.total }}</span>
         </div>
         <Icon icon="mdi:calendar-today" class="bg-icon" />
       </div>
 
       <div class="stat-card purple-gradient">
         <div class="stat-info">
-          <h3>好评率</h3>
-          <span class="num">98%</span>
+          <h3>完成率</h3>
+          <span class="num">{{ completionRate }}%</span>
         </div>
-        <Icon icon="mdi:star-face" class="bg-icon" />
+        <Icon icon="mdi:chart-pie" class="bg-icon" />
       </div>
     </div>
 
@@ -39,9 +39,6 @@
         <h3>候诊队列 <small>Patient Queue</small></h3>
         <div class="actions">
           <button class="btn-refresh" @click="refresh"><Icon icon="mdi:refresh" /> 刷新</button>
-          <button class="btn-call-next" @click="callNext">
-            <Icon icon="mdi:bullhorn-outline" /> 叫号下一位
-          </button>
         </div>
       </div>
 
@@ -49,62 +46,318 @@
         <table>
           <thead>
           <tr>
-            <th>就诊号</th>
+            <th>预约编号</th>
             <th>姓名</th>
             <th>性别</th>
             <th>年龄</th>
             <th>挂号类型</th>
-            <th>等待时间</th>
+            <th>预约时间段</th>
             <th>状态</th>
             <th>操作</th>
           </tr>
           </thead>
           <tbody>
-          <tr v-for="p in patientQueue" :key="p.id">
-            <td class="id-col">#{{ p.id }}</td>
-            <td class="name-col">{{ p.name }}</td>
-            <td>{{ p.gender }}</td>
-            <td>{{ p.age }}</td>
+          <tr v-for="appointment in appointments" :key="appointment.appointmentId">
+            <td class="id-col">{{ appointment.appointmentId }}</td>
+            <td class="name-col">{{ getPatientName(appointment) }}</td>
+            <td>{{ getPatientGender(appointment) }}</td>
+            <td>{{ getPatientAge(appointment) }}</td>
             <td>
-              <span class="type-badge" :class="p.typeClass">{{ p.type }}</span>
+              <span class="type-badge" :class="getAppointmentTypeClass(appointment)">{{ getAppointmentType(appointment) }}</span>
             </td>
-            <td>{{ p.waitTime }} mins</td>
+            <td>{{ getTimeSlot(appointment) }}</td>
             <td>
-              <span class="status-dot" :class="p.statusColor"></span>
-              {{ p.status }}
+              <span class="status-badge" :class="getStatusClass(appointment.status)">
+                {{ getStatusText(appointment.status) }}
+              </span>
             </td>
             <td>
-              <button class="btn-action primary" @click="handleDiagnose(p)">接诊</button>
-              <button class="btn-action text">查看档案</button>
+              <button v-if="appointment.status === 'BOOKED'"
+                      class="btn-action primary"
+                      @click="startConsultationHandler(appointment)">
+                接诊
+              </button>
+              <button v-if="currentConsultation?.appointmentId === appointment.appointmentId"
+                      class="btn-action success"
+                      @click="showDiagnosisModal(appointment)">
+                诊断结束
+              </button>
+              <span v-if="appointment.status === 'COMPLETED'" class="completed-text">已完成</span>
             </td>
           </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <!-- 接诊诊断弹窗 -->
+    <div v-if="showConsultationModal" class="modal-overlay" @click="hideConsultationModal">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>患者诊断</h3>
+          <button class="close-btn" @click="hideConsultationModal">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="patient-info">
+            <h4>患者信息</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>姓名：</label>
+                <span>{{ currentConsultation?.patientName }}</span>
+              </div>
+              <div class="info-item">
+                <label>性别：</label>
+                <span>{{ currentConsultation?.patientGender }}</span>
+              </div>
+              <div class="info-item">
+                <label>年龄：</label>
+                <span>{{ currentConsultation?.patientAge }}</span>
+              </div>
+              <div class="info-item">
+                <label>预约时间段：</label>
+                <span>{{ currentConsultation?.timeSlot }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="consultation-info">
+            <h4>就诊信息</h4>
+            <div class="info-grid">
+              <div class="info-item">
+                <label>就诊时间：</label>
+                <span>{{ currentConsultation?.visitTime }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="diagnosis-section">
+            <h4>诊断结果</h4>
+            <textarea
+              v-model="diagnosis"
+              placeholder="请输入诊断结果..."
+              rows="6"
+              class="diagnosis-input"
+            ></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn secondary" @click="hideConsultationModal">取消</button>
+          <button class="btn primary" @click="completeConsultationHandler" :disabled="!diagnosis.trim()">
+            完成诊断
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Icon } from '@iconify/vue'
+import { getTodayAppointments, getAppointmentDetails, startConsultation, completeConsultation } from '../api/schedule.js'
 
-const patientQueue = ref([
-  { id: '202501', name: '张伟', gender: '男', age: 35, type: '普通号', typeClass: 'normal', waitTime: 5, status: '候诊中', statusColor: 'blue' },
-  { id: '202502', name: '李秀英', gender: '女', age: 62, type: '专家号', typeClass: 'expert', waitTime: 12, status: '候诊中', statusColor: 'blue' },
-  { id: '202503', name: '王强', gender: '男', age: 28, type: '急诊', typeClass: 'emergency', waitTime: 1, status: '准备中', statusColor: 'orange' },
-  { id: '202504', name: '陈静', gender: '女', age: 45, type: '普通号', typeClass: 'normal', waitTime: 25, status: '过号', statusColor: 'gray' },
-])
+const appointments = ref([])
+const loading = ref(false)
+const showConsultationModal = ref(false)
+const currentConsultation = ref(null)
+const diagnosis = ref('')
 
-function refresh() {
-  alert('模拟刷新队列（后续可接后端接口）')
+// 统计数据
+const stats = computed(() => {
+  const total = appointments.value.length
+  const completed = appointments.value.filter(a => a.status === 'COMPLETED').length
+  const waiting = appointments.value.filter(a => a.status === 'BOOKED').length
+
+  return {
+    total,
+    completed,
+    waiting
+  }
+})
+
+// 完成率
+const completionRate = computed(() => {
+  if (stats.value.total === 0) return 0
+  return Math.round((stats.value.completed / stats.value.total) * 100)
+})
+
+// 获取患者姓名
+function getPatientName(appointment) {
+  return appointment.patientName || '未知'
 }
-function callNext() {
-  alert('模拟叫号下一位（后续可接后端接口）')
+
+// 获取患者性别
+function getPatientGender(appointment) {
+  return appointment.patientGender || '未知'
 }
-function handleDiagnose(p) {
-  alert(`开始接诊患者：${p.name} (ID: ${p.id})`)
+
+// 获取患者年龄
+function getPatientAge(appointment) {
+  if (!appointment.patientBirthday) return '未知'
+
+  const birthDate = new Date(appointment.patientBirthday)
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+
+  return age
 }
+
+// 获取挂号类型
+function getAppointmentType(appointment) {
+  const doctorTitle = appointment.title || ''
+  return doctorTitle.includes('专家') || doctorTitle.includes('主任') ? '专家号' : '普通号'
+}
+
+// 获取挂号类型样式类
+function getAppointmentTypeClass(appointment) {
+  return getAppointmentType(appointment) === '专家号' ? 'expert' : 'normal'
+}
+
+// 获取预约时间段
+function getTimeSlot(appointment) {
+  return appointment.timeSlot || '未知'
+}
+
+// 获取状态文本
+function getStatusText(status) {
+  const statusMap = {
+    'BOOKED': '等待中',
+    'COMPLETED': '已完成',
+    'CANCELLED': '已取消',
+    'NO_SHOW': '已过期'
+  }
+  return statusMap[status] || '未知'
+}
+
+// 获取状态样式类
+function getStatusClass(status) {
+  const classMap = {
+    'BOOKED': 'waiting',
+    'COMPLETED': 'completed',
+    'CANCELLED': 'cancelled',
+    'NO_SHOW': 'expired'
+  }
+  return classMap[status] || 'unknown'
+}
+
+// 加载今日预约数据
+async function loadTodayAppointments() {
+  loading.value = true
+  try {
+    const response = await getTodayAppointments()
+    if (response.code === 200) {
+      appointments.value = response.data || []
+    } else {
+      console.error('获取预约数据失败:', response.message)
+      appointments.value = []
+    }
+  } catch (error) {
+    console.error('加载预约数据失败:', error)
+    appointments.value = []
+  } finally {
+    loading.value = false
+  }
+}
+
+// 开始接诊
+async function startConsultationHandler(appointment) {
+  try {
+    const response = await startConsultation(appointment.appointmentId)
+    if (response.code === 200) {
+      // 获取完整的预约详情
+      const detailResponse = await getAppointmentDetails(appointment.appointmentId)
+      if (detailResponse.code === 200) {
+        currentConsultation.value = {
+          ...detailResponse.data,
+          appointmentId: appointment.appointmentId,
+          patientName: detailResponse.data.patientName,
+          patientGender: detailResponse.data.patientGender,
+          patientAge: getPatientAge(detailResponse.data),
+          timeSlot: detailResponse.data.timeSlot,
+          visitTime: new Date().toLocaleString('zh-CN')
+        }
+        showConsultationModal.value = true
+      }
+    } else {
+      alert('开始接诊失败: ' + response.message)
+    }
+  } catch (error) {
+    console.error('开始接诊失败:', error)
+    alert('开始接诊失败，请重试')
+  }
+}
+
+// 显示诊断弹窗
+async function showDiagnosisModal(appointment) {
+  try {
+    const response = await getAppointmentDetails(appointment.appointmentId)
+    if (response.code === 200 && response.data && response.data.length > 0) {
+      // 选择第一个有效的预约详情
+      const appointmentDetail = response.data.find(item => item.status === 'BOOKED') || response.data[0]
+
+      currentConsultation.value = {
+        ...appointmentDetail,
+        appointmentId: appointment.appointmentId,
+        patientName: appointmentDetail.patientName || '未知',
+        patientGender: appointmentDetail.patientGender || '未知',
+        patientAge: getPatientAge({ patientBirthday: appointmentDetail.patientBirthday }),
+        timeSlot: appointmentDetail.timeSlot || '未知',
+        visitTime: new Date().toLocaleString('zh-CN')
+      }
+      showConsultationModal.value = true
+    } else {
+      alert('获取预约详情失败')
+    }
+  } catch (error) {
+    console.error('获取预约详情失败:', error)
+    alert('获取预约详情失败，请重试')
+  }
+}
+
+// 隐藏诊断弹窗
+function hideConsultationModal() {
+  showConsultationModal.value = false
+  currentConsultation.value = null
+  diagnosis.value = ''
+}
+
+// 完成诊断
+async function completeConsultationHandler() {
+  if (!diagnosis.value.trim()) {
+    alert('请填写诊断结果')
+    return
+  }
+
+  try {
+    const response = await completeConsultation(currentConsultation.value.appointmentId, diagnosis.value)
+    if (response.code === 200) {
+      alert('诊断完成！')
+      hideConsultationModal()
+      // 重新加载数据
+      await loadTodayAppointments()
+    } else {
+      alert('完成诊断失败: ' + response.message)
+    }
+  } catch (error) {
+    console.error('完成诊断失败:', error)
+    alert('完成诊断失败，请重试')
+  }
+}
+
+// 刷新数据
+async function refresh() {
+  await loadTodayAppointments()
+}
+
+// 初始化
+onMounted(() => {
+  loadTodayAppointments()
+})
 </script>
 
 <style scoped>
@@ -153,8 +406,7 @@ function handleDiagnose(p) {
 
 .actions { display: flex; gap: 10px; }
 .btn-refresh { border: 1px solid #ddd; background: white; padding: 8px 15px; border-radius: 6px; cursor: pointer; color: #666; display: flex; align-items: center; gap: 5px; }
-.btn-call-next { background: #004ea2; color: white; border: none; padding: 8px 20px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: bold; transition: 0.2s; }
-.btn-call-next:hover { background: #003d80; box-shadow: 0 4px 10px rgba(0,78,162,0.3); }
+.btn-refresh:hover { background: #f5f5f5; }
 
 .table-wrapper { flex: 1; overflow-y: auto; }
 table { width: 100%; border-collapse: collapse; }
@@ -168,15 +420,192 @@ tr:hover { background: #f0f7ff; }
 .type-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; }
 .type-badge.normal { background: #e6f7ff; color: #004ea2; }
 .type-badge.expert { background: #fff7e6; color: #fa8c16; border: 1px solid #ffd591; }
-.type-badge.emergency { background: #fff1f0; color: #f5222d; font-weight: bold; }
 
-.status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-.status-dot.blue { background: #1890ff; }
-.status-dot.orange { background: #fa8c16; }
-.status-dot.gray { background: #d9d9d9; }
+.status-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500; }
+.status-badge.waiting { background: #e6f7ff; color: #1890ff; }
+.status-badge.completed { background: #f6ffed; color: #52c41a; }
+.status-badge.cancelled { background: #fff2f0; color: #ff4d4f; }
+.status-badge.expired { background: #f9f9f9; color: #8c8c8c; }
 
-.btn-action { border: none; background: none; cursor: pointer; font-size: 0.9rem; margin-right: 10px; }
-.btn-action.primary { color: #004ea2; font-weight: bold; }
-.btn-action.text { color: #999; }
-.btn-action:hover { text-decoration: underline; }
+.btn-action {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  margin-right: 10px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.btn-action.primary {
+  color: #004ea2;
+  font-weight: bold;
+  border: 1px solid #004ea2;
+}
+.btn-action.primary:hover {
+  background: #004ea2;
+  color: white;
+}
+.btn-action.success {
+  background: #52c41a;
+  color: white;
+  font-weight: bold;
+}
+.btn-action.success:hover {
+  background: #389e0d;
+}
+.completed-text { color: #52c41a; font-weight: 500; }
+
+/* 弹窗样式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.patient-info, .consultation-info, .diagnosis-section {
+  margin-bottom: 24px;
+}
+
+.patient-info h4, .consultation-info h4, .diagnosis-section h4 {
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+  color: #333;
+  font-weight: 600;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+}
+
+.info-item label {
+  font-weight: 500;
+  color: #666;
+  min-width: 80px;
+  margin-right: 8px;
+}
+
+.info-item span {
+  color: #333;
+}
+
+.diagnosis-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.diagnosis-input:focus {
+  border-color: #004ea2;
+  box-shadow: 0 0 0 2px rgba(0, 78, 162, 0.1);
+}
+
+.modal-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid #d9d9d9;
+  background: white;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.btn.primary {
+  background: #004ea2;
+  color: white;
+  border-color: #004ea2;
+}
+
+.btn.primary:hover:not(:disabled) {
+  background: #003d80;
+  border-color: #003d80;
+}
+
+.btn.secondary:hover {
+  background: #f5f5f5;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 </style>

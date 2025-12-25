@@ -2,6 +2,58 @@
 import request from '../utils/request.js'
 
 /**
+ * 获取当前医生今日预约列表
+ * 后端接口：GET /api/appointments/today
+ */
+export const getTodayAppointments = () => {
+  return request({
+    url: '/api/appointments/today',
+    method: 'GET'
+  })
+}
+
+/**
+ * 获取预约详细信息
+ * 后端接口：GET /api/appointments/{appointmentId}/details
+ * @param {string} appointmentId - 预约ID
+ */
+export const getAppointmentDetails = (appointmentId) => {
+  return request({
+    url: `/api/appointments/${appointmentId}/details`,
+    method: 'GET'
+  })
+}
+
+/**
+ * 开始接诊
+ * 后端接口：POST /api/appointments/{appointmentId}/start
+ * @param {string} appointmentId - 预约ID
+ */
+export const startConsultation = (appointmentId) => {
+  return request({
+    url: `/api/appointments/${appointmentId}/start`,
+    method: 'POST'
+  })
+}
+
+/**
+ * 完成接诊
+ * 后端接口：POST /api/appointments/{appointmentId}/complete
+ * @param {string} appointmentId - 预约ID
+ * @param {string} diagnosis - 诊断结果
+ */
+export const completeConsultation = (appointmentId, diagnosis) => {
+  return request({
+    url: `/api/appointments/${appointmentId}/complete`,
+    method: 'POST',
+    data: diagnosis,
+    headers: {
+      'Content-Type': 'text/plain'
+    }
+  })
+}
+
+/**
  * 获取当前医生排班信息
  * 后端接口：GET /api/schedules/my-schedules
  */
