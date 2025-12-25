@@ -366,8 +366,23 @@ public class PatientServiceImpl implements PatientService {
             throw new BusinessException(ResultCode.BUSINESS_ERROR, "删除关联关系失败");
         }
 
-        // 注意：这里只删除关联关系，不删除 patient 表中的数据
-        // 因为该患者可能被其他用户关联
+        // 3. 检查该就诊人是否还有其他用户关联
+        List<UserPatient> remainingLinks = userPatientMapper.selectList(
+                new LambdaQueryWrapper<UserPatient>()
+                        .eq(UserPatient::getPatientId, patientId)
+        );
+
+        // 4. 如果没有其他用户关联该就诊人，删除 patient 表中的记录
+        if (remainingLinks == null || remainingLinks.isEmpty()) {
+            int patientDeleteResult = patientMapper.deleteById(patientId);
+            if (patientDeleteResult > 0) {
+                System.out.println("就诊人 " + patientId + " 已无关联用户，已从 patient 表中删除");
+            } else {
+                System.out.println("警告：尝试删除就诊人 " + patientId + " 失败，但关联关系已删除");
+            }
+        } else {
+            System.out.println("就诊人 " + patientId + " 仍有 " + remainingLinks.size() + " 个用户关联，保留 patient 表记录");
+        }
     }
 }
 
