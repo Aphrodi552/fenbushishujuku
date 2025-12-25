@@ -2,44 +2,67 @@
 import request from '../utils/request.js'
 
 /**
- * 科室列表接口
- * 后端接口示例：GET /api/departments
+ * 获取当前医生排班信息
+ * 后端接口：GET /api/schedules/my-schedules
  */
-export const getDepartments = () => {
+export const getMySchedules = () => {
   return request({
-    url: '/api/departments',
+    url: '/api/schedules/my-schedules',
     method: 'GET'
   })
 }
 
 /**
- * 医生排班查询接口
- * 后端接口示例：GET /api/schedules?departmentId=xxx&date=xxx
+ * 根据日期范围获取当前医生排班信息
+ * 后端接口：GET /api/schedules/my-schedules/range
  * @param {Object} params - 查询参数
- * @param {string} params.departmentId - 科室ID（可选）
- * @param {string} params.date - 日期（格式：yyyy-MM-dd，必选）
+ * @param {string} params.startDate - 开始日期（yyyy-MM-dd）
+ * @param {string} params.endDate - 结束日期（yyyy-MM-dd）
+ * @param {string} params.timeSlot - 时间段（可选）
  */
 export const getDoctorSchedules = (params) => {
   return request({
-    url: '/api/schedules',
+    url: '/api/schedules/my-schedules/range',
     method: 'GET',
-    params // 自动拼接为查询字符串
+    params
   })
 }
 
 /**
- * 提交预约接口
- * 后端接口示例：POST /api/reservations
- * @param {Object} data - 预约信息
- * @param {string} data.scheduleId - 排班ID
- * @param {string} data.patientId - 患者ID
- * @param {string} data.patientName - 患者姓名
- * @param {string} data.phone - 联系电话
+ * 创建排班
+ * 后端接口：POST /api/schedules
+ * @param {Object} data - 排班信息
  */
-export const submitReservation = (data) => {
+export const createSchedule = (data) => {
   return request({
-    url: '/api/reservations',
+    url: '/api/schedules',
     method: 'POST',
-    data // 请求体数据
+    data
+  })
+}
+
+/**
+ * 更新排班
+ * 后端接口：PUT /api/schedules/{scheduleId}
+ * @param {string} scheduleId - 排班ID
+ * @param {Object} data - 排班信息
+ */
+export const updateSchedule = (scheduleId, data) => {
+  return request({
+    url: `/api/schedules/${scheduleId}`,
+    method: 'PUT',
+    data
+  })
+}
+
+/**
+ * 删除排班
+ * 后端接口：DELETE /api/schedules/{scheduleId}
+ * @param {string} scheduleId - 排班ID
+ */
+export const deleteSchedule = (scheduleId) => {
+  return request({
+    url: `/api/schedules/${scheduleId}`,
+    method: 'DELETE'
   })
 }

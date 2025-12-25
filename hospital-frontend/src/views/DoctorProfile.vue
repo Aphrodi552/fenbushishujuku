@@ -385,9 +385,8 @@ onMounted(load)
   align-items: flex-start;
   gap: 14px;
 }
-.head-card h3 { margin: 0; font-size: 1.1rem; color: #333; }
+.head-card h3 { margin: 0; font-size: 1.5rem; color: #333;  }
 .head-card small { color: #999; font-weight: normal; margin-left: 8px; }
-.sub { margin-top: 6px; color: #999; font-size: 0.85rem; }
 
 .right { display: flex; align-items: center; gap: 10px; }
 .error { color: #ff4d4f; font-size: 0.85rem; max-width: 360px; }

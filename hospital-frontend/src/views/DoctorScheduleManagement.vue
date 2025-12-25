@@ -21,9 +21,6 @@
           <button class="btn" @click="resetFilters" :disabled="loading">重置</button>
         </div>
       </div>
-      <div class="hint">
-        排班字段：日期(work_date)、时间段(time_slot)、总号源(total_quota)、已预约(booked_count)、剩余号源（计算值）。如接口异常将显示示例数据。
-      </div>
     </div>
 
     <!-- 概览区 -->
@@ -41,7 +38,7 @@
         <div class="v">{{ sumBooked }}</div>
       </div>
       <div class="stat">
-        <div class="k">平均使用率</div>
+        <div class="k">预约率</div>
         <div class="v">{{ avgUsage }}%</div>
       </div>
     </div>
@@ -88,7 +85,7 @@
         </table>
       </div>
       <div class="foot">
-        <span class="tip">说明：使用率 = booked_count / total_quota。按钮置灰表示号源已满。</span>
+        <span class="tip">说明：预约率 = booked_count / total_quota。按钮置灰表示号源已满。</span>
       </div>
     </div>
   </div>
@@ -293,7 +290,7 @@ onMounted(() => {
   margin-bottom: 6px;
 }
 .field input, .field select {
-  width: 100%;
+  width: 85%;
   padding: 10px 10px;
   border: 1px solid #e6e6e6;
   border-radius: 8px;
@@ -328,11 +325,6 @@ onMounted(() => {
 .btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-.hint {
-  margin-top: 10px;
-  font-size: 0.82rem;
-  color: #999;
 }
 .stats {
   display: grid;
