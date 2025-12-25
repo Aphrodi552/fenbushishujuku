@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class PatientServiceImpl implements PatientService {
@@ -33,6 +35,47 @@ public class PatientServiceImpl implements PatientService {
 
     @Autowired
     private UserPatientMapper userPatientMapper;
+
+    /**
+     * 生成唯一的患者ID（以P开头，长度不超过32）
+     * 格式：P + 时间戳（yyyyMMddHHmmss） + 随机数（4位）
+     * 总长度：1 + 14 + 4 = 19 位（远小于32位限制）
+     * 
+     * @return 唯一的患者ID
+     */
+    private String generateUniquePatientId() {
+        String patientId;
+        int maxAttempts = 10; // 最多尝试10次
+        int attempts = 0;
+        
+        do {
+            // 生成ID：P + 时间戳（14位） + 随机数（4位）
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+            String random = String.format("%04d", (int)(Math.random() * 10000));
+            patientId = "P" + timestamp + random;
+            
+            // 检查ID是否已存在
+            Patient existing = patientMapper.selectById(patientId);
+            if (existing == null) {
+                return patientId; // ID唯一，返回
+            }
+            
+            attempts++;
+            if (attempts >= maxAttempts) {
+                // 如果尝试10次都重复，使用UUID（去掉连字符）
+                String uuid = UUID.randomUUID().toString().replace("-", "");
+                // 取前31位，加上P前缀，总共32位
+                patientId = "P" + uuid.substring(0, 31);
+                // 再次检查唯一性
+                existing = patientMapper.selectById(patientId);
+                if (existing == null) {
+                    return patientId;
+                }
+                // 如果还是重复，抛出异常
+                throw new BusinessException(ResultCode.BUSINESS_ERROR, "生成患者ID失败，请稍后重试");
+            }
+        } while (true);
+    }
 
     @Autowired
     private UserMapper userMapper;
@@ -129,9 +172,12 @@ public class PatientServiceImpl implements PatientService {
             }
         }
         
-        // 3. 创建新患者
+        // 3. 生成唯一的患者ID（以P开头，长度不超过32）
+        String patientId = generateUniquePatientId();
+        
+        // 4. 创建新患者
         Patient targetPatient = new Patient();
-        targetPatient.setPatientId(UUID.randomUUID().toString());
+        targetPatient.setPatientId(patientId);
         targetPatient.setPatientName(request.getName());
         targetPatient.setPatientIdcard(request.getIdCard());
         targetPatient.setPatientPhone(request.getPhone());
