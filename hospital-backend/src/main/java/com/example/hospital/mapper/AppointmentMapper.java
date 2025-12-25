@@ -43,11 +43,11 @@ public interface AppointmentMapper extends BaseMapper<Appointment> {
     List<Appointment> selectTodayAppointmentsByDoctorId(String doctorId, LocalDate today);
 
     /**
-     * 根据预约ID查询预约（用于分片环境）
+     * 根据预约ID查询预约（用于分片环境，只返回有效状态的记录）
      * @param appointmentId 预约ID
      * @return 预约列表
      */
-    @Select("SELECT * FROM appointment WHERE appointment_id = #{appointmentId}")
+    @Select("SELECT * FROM appointment WHERE appointment_id = #{appointmentId} AND status IN ('BOOKED', 'COMPLETED')")
     List<Appointment> selectByAppointmentId(String appointmentId);
 
     /**
@@ -58,6 +58,23 @@ public interface AppointmentMapper extends BaseMapper<Appointment> {
      */
     @Update("UPDATE appointment SET status = #{status} WHERE appointment_id = #{appointmentId}")
     int updateAppointmentStatus(String status, String appointmentId);
+
+    /**
+     * 根据预约ID查询基本预约信息（只选择数据库中存在的字段）
+     * @param appointmentId 预约ID
+     * @return 预约信息
+     */
+    @Select("SELECT appointment_id, user_id, patient_id, schedule_id, hospital_id, status, created_at FROM appointment WHERE appointment_id = #{appointmentId}")
+    @Results({
+        @Result(property = "appointmentId", column = "appointment_id"),
+        @Result(property = "userId", column = "user_id"),
+        @Result(property = "patientId", column = "patient_id"),
+        @Result(property = "scheduleId", column = "schedule_id"),
+        @Result(property = "hospitalId", column = "hospital_id"),
+        @Result(property = "status", column = "status"),
+        @Result(property = "createdAt", column = "created_at")
+    })
+    Appointment selectBasicById(String appointmentId);
 
     /**
      * 根据预约ID查询完整的预约信息（包含患者、医生、排班信息）

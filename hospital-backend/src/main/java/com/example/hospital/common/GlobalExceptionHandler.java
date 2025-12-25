@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.jdbc.CannotGetJdbcConnectionException;
 
 import jakarta.validation.ValidationException;
 import jakarta.validation.ConstraintViolationException;
@@ -118,6 +119,16 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public Result handleForbiddenException(ForbiddenException e) {
         return Result.error(ResultCode.FORBIDDEN, e.getMessage());
+    }
+
+    /**
+     * 处理数据库连接异常
+     */
+    @ExceptionHandler(CannotGetJdbcConnectionException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Result handleDatabaseConnectionException(CannotGetJdbcConnectionException e) {
+        e.printStackTrace();
+        return Result.error(ResultCode.INTERNAL_SERVER_ERROR, "数据库连接失败，请检查数据库服务状态");
     }
 
 //    /**

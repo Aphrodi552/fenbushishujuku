@@ -418,9 +418,10 @@ onMounted(() => {
 .tooltip {
   display: none;
   position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  margin-left: 8px;
   background: #333;
   color: #fff;
   padding: 8px;

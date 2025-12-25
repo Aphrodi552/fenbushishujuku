@@ -65,7 +65,7 @@
             <td>
               <span class="type-badge" :class="getAppointmentTypeClass(appointment)">{{ getAppointmentType(appointment) }}</span>
             </td>
-            <td>{{ getTimeSlot(appointment) }}</td>
+            <td><span class="badge">{{ getTimeSlot(appointment) }}</span></td>
             <td>
               <span class="status-badge" :class="getStatusClass(appointment.status)">
                 {{ getStatusText(appointment.status) }}
@@ -76,11 +76,6 @@
                       class="btn-action primary"
                       @click="startConsultationHandler(appointment)">
                 接诊
-              </button>
-              <button v-if="currentConsultation?.appointmentId === appointment.appointmentId"
-                      class="btn-action success"
-                      @click="showDiagnosisModal(appointment)">
-                诊断结束
               </button>
               <span v-if="appointment.status === 'COMPLETED'" class="completed-text">已完成</span>
             </td>
@@ -115,7 +110,7 @@
               </div>
               <div class="info-item">
                 <label>预约时间段：</label>
-                <span>{{ currentConsultation?.timeSlot }}</span>
+                <span class="badge">{{ currentConsultation?.timeSlot }}</span>
               </div>
             </div>
           </div>
@@ -133,17 +128,22 @@
           <div class="diagnosis-section">
             <h4>诊断结果</h4>
             <textarea
+              :key="showConsultationModal"
               v-model="diagnosis"
               placeholder="请输入诊断结果..."
               rows="6"
               class="diagnosis-input"
+              tabindex="0"
+              @input="handleDiagnosisInput"
+              @keydown="handleKeyDown"
+              @focus="handleFocus"
             ></textarea>
           </div>
         </div>
         <div class="modal-footer">
           <button class="btn secondary" @click="hideConsultationModal">取消</button>
           <button class="btn primary" @click="completeConsultationHandler" :disabled="!diagnosis.trim()">
-            完成诊断
+完成诊断
           </button>
         </div>
       </div>
@@ -152,7 +152,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { Icon } from '@iconify/vue'
 import { getTodayAppointments, getAppointmentDetails, startConsultation, completeConsultation } from '../api/schedule.js'
 
@@ -267,21 +267,36 @@ async function loadTodayAppointments() {
 // 开始接诊
 async function startConsultationHandler(appointment) {
   try {
-    const response = await startConsultation(appointment.appointmentId)
+    // 生成就诊时间（前端本地时间）
+    const visitTimeString = getLocalTimeString()
+
+    const response = await startConsultation(appointment.appointmentId, visitTimeString)
     if (response.code === 200) {
       // 获取完整的预约详情
       const detailResponse = await getAppointmentDetails(appointment.appointmentId)
-      if (detailResponse.code === 200) {
+      if (detailResponse.code === 200 && detailResponse.data && detailResponse.data.length > 0) {
+        // 从返回的数组中选择匹配的记录（根据patientId匹配）
+        const appointmentDetail = detailResponse.data.find(item => item.patientId === appointment.patientId) || detailResponse.data[0]
+
         currentConsultation.value = {
-          ...detailResponse.data,
+          ...appointmentDetail,
           appointmentId: appointment.appointmentId,
-          patientName: detailResponse.data.patientName,
-          patientGender: detailResponse.data.patientGender,
-          patientAge: getPatientAge(detailResponse.data),
-          timeSlot: detailResponse.data.timeSlot,
-          visitTime: new Date().toLocaleString('zh-CN')
+          patientName: appointmentDetail.patientName || '未知',
+          patientGender: appointmentDetail.patientGender || '未知',
+          patientAge: getPatientAge({ patientBirthday: appointmentDetail.patientBirthday }),
+          timeSlot: appointmentDetail.timeSlot || '未知',
+          visitTime: visitTimeString, // 使用传递给后端的时间
+          isEditing: false // 新建诊断模式
         }
+        diagnosis.value = ''
         showConsultationModal.value = true
+
+        // 使用nextTick确保DOM更新后再聚焦
+        await nextTick()
+        const textarea = document.querySelector('.diagnosis-input')
+        if (textarea) {
+          textarea.focus()
+        }
       }
     } else {
       alert('开始接诊失败: ' + response.message)
@@ -292,38 +307,28 @@ async function startConsultationHandler(appointment) {
   }
 }
 
-// 显示诊断弹窗
-async function showDiagnosisModal(appointment) {
-  try {
-    const response = await getAppointmentDetails(appointment.appointmentId)
-    if (response.code === 200 && response.data && response.data.length > 0) {
-      // 选择第一个有效的预约详情
-      const appointmentDetail = response.data.find(item => item.status === 'BOOKED') || response.data[0]
-
-      currentConsultation.value = {
-        ...appointmentDetail,
-        appointmentId: appointment.appointmentId,
-        patientName: appointmentDetail.patientName || '未知',
-        patientGender: appointmentDetail.patientGender || '未知',
-        patientAge: getPatientAge({ patientBirthday: appointmentDetail.patientBirthday }),
-        timeSlot: appointmentDetail.timeSlot || '未知',
-        visitTime: new Date().toLocaleString('zh-CN')
-      }
-      showConsultationModal.value = true
-    } else {
-      alert('获取预约详情失败')
-    }
-  } catch (error) {
-    console.error('获取预约详情失败:', error)
-    alert('获取预约详情失败，请重试')
-  }
-}
 
 // 隐藏诊断弹窗
 function hideConsultationModal() {
   showConsultationModal.value = false
   currentConsultation.value = null
   diagnosis.value = ''
+}
+
+// 诊断输入调试
+function handleDiagnosisInput(event) {
+  console.log('Diagnosis input:', event.target.value)
+  diagnosis.value = event.target.value
+}
+
+// 键盘按下调试
+function handleKeyDown(event) {
+  console.log('Key down:', event.key)
+}
+
+// 聚焦调试
+function handleFocus(event) {
+  console.log('Textarea focused')
 }
 
 // 完成诊断
@@ -334,7 +339,7 @@ async function completeConsultationHandler() {
   }
 
   try {
-    const response = await completeConsultation(currentConsultation.value.appointmentId, diagnosis.value)
+    const response = await completeConsultation(currentConsultation.value.appointmentId, currentConsultation.value.patientId, diagnosis.value)
     if (response.code === 200) {
       alert('诊断完成！')
       hideConsultationModal()
@@ -347,6 +352,14 @@ async function completeConsultationHandler() {
     console.error('完成诊断失败:', error)
     alert('完成诊断失败，请重试')
   }
+}
+
+
+// 生成浏览器本地时区时间字符串
+function getLocalTimeString() {
+  const now = new Date()
+  // 使用浏览器本地时区
+  return now.toLocaleString('zh-CN')
 }
 
 // 刷新数据
@@ -427,6 +440,16 @@ tr:hover { background: #f0f7ff; }
 .status-badge.cancelled { background: #fff2f0; color: #ff4d4f; }
 .status-badge.expired { background: #f9f9f9; color: #8c8c8c; }
 
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e6f7ff;
+  color: #004ea2;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
 .btn-action {
   border: none;
   background: none;
@@ -455,6 +478,10 @@ tr:hover { background: #f0f7ff; }
   background: #389e0d;
 }
 .completed-text { color: #52c41a; font-weight: 500; }
+.completed-actions { display: flex; align-items: center; gap: 8px; }
+.btn-action.secondary { color: #666; border-color: #d9d9d9; }
+.btn-action.secondary:hover { background: #f5f5f5; }
+.btn-action.small { padding: 4px 8px; font-size: 0.85rem; }
 
 /* 弹窗样式 */
 .modal-overlay {
@@ -476,7 +503,6 @@ tr:hover { background: #f0f7ff; }
   width: 90%;
   max-width: 600px;
   max-height: 80vh;
-  overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 

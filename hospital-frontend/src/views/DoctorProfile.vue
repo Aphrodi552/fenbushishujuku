@@ -14,6 +14,27 @@
       </div>
     </div>
 
+    <!-- 快捷信息卡 -->
+    <div class="stats">
+      <div class="stat">
+        <div class="k">所属院区</div>
+        <div class="v">{{ form.hospital_name || '-' }}</div>
+      </div>
+      <div class="stat">
+        <div class="k">所属科室</div>
+        <div class="v">{{ form.department_name || '-' }}</div>
+      </div>
+      <div class="stat">
+        <div class="k">职称</div>
+        <div class="v">{{ form.title || '-' }}</div>
+      </div>
+
+      <div class="stat">
+        <div class="k">展示状态</div>
+        <div class="v">{{ editing ? '编辑中' : '只读' }}</div>
+      </div>
+    </div>
+
     <!-- 信息卡 -->
     <div class="card form-card">
       <div class="form-grid">
@@ -57,26 +78,6 @@
       </div>
     </div>
 
-    <!-- 快捷信息卡 -->
-    <div class="stats">
-      <div class="stat">
-        <div class="k">所属院区</div>
-        <div class="v">{{ form.hospital_name || '-' }}</div>
-      </div>      
-      <div class="stat">
-        <div class="k">所属科室</div>
-        <div class="v">{{ form.department_name || '-' }}</div>
-      </div>
-      <div class="stat">
-        <div class="k">职称</div>
-        <div class="v">{{ form.title || '-' }}</div>
-      </div>
-
-      <div class="stat">
-        <div class="k">展示状态</div>
-        <div class="v">{{ editing ? '编辑中' : '只读' }}</div>
-      </div>
-    </div>
   </div>
 </template>
 

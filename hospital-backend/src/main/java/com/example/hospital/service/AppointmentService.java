@@ -1,7 +1,9 @@
 package com.example.hospital.service;
 
 import com.example.hospital.dto.AppointmentDetailDTO;
+import com.example.hospital.dto.MedicalRecordDTO;
 import com.example.hospital.entity.Appointment;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -37,9 +39,10 @@ public interface AppointmentService {
     /**
      * 开始接诊
      * @param appointmentId 预约ID
+     * @param visitTimeStr 就诊时间字符串（前端本地时间）
      * @return 是否成功
      */
-    boolean startConsultation(String appointmentId);
+    boolean startConsultation(String appointmentId, String visitTimeStr);
 
     /**
      * 完成接诊
@@ -47,5 +50,22 @@ public interface AppointmentService {
      * @param diagnosis 诊断结果
      * @return 是否成功
      */
-    boolean completeConsultation(String appointmentId, String diagnosis);
+    boolean completeConsultation(String appointmentId, String patientId, String diagnosis);
+
+    /**
+     * 获取诊断结果
+     * @param appointmentId 预约ID
+     * @return 诊断结果
+     */
+    String getDiagnosis(String appointmentId);
+
+    /**
+     * 获取医生病历档案
+     * @param userId 用户ID (医生对应的用户ID)
+     * @param month 查询月份 (YYYY-MM格式)
+     * @param page 页码
+     * @param pageSize 每页大小
+     * @return 病历记录分页列表
+     */
+    Page<MedicalRecordDTO> getMedicalRecords(String userId, String month, int page, int pageSize);
 }

@@ -28,11 +28,13 @@ export const getAppointmentDetails = (appointmentId) => {
  * 开始接诊
  * 后端接口：POST /api/appointments/{appointmentId}/start
  * @param {string} appointmentId - 预约ID
+ * @param {string} visitTime - 就诊时间（前端本地时间）
  */
-export const startConsultation = (appointmentId) => {
+export const startConsultation = (appointmentId, visitTime) => {
   return request({
     url: `/api/appointments/${appointmentId}/start`,
-    method: 'POST'
+    method: 'POST',
+    data: { visitTime }
   })
 }
 
@@ -40,16 +42,29 @@ export const startConsultation = (appointmentId) => {
  * 完成接诊
  * 后端接口：POST /api/appointments/{appointmentId}/complete
  * @param {string} appointmentId - 预约ID
+ * @param {string} patientId - 患者ID
  * @param {string} diagnosis - 诊断结果
  */
-export const completeConsultation = (appointmentId, diagnosis) => {
+export const completeConsultation = (appointmentId, patientId, diagnosis) => {
   return request({
     url: `/api/appointments/${appointmentId}/complete`,
     method: 'POST',
-    data: diagnosis,
+    data: { patientId, diagnosis },
     headers: {
-      'Content-Type': 'text/plain'
+      'Content-Type': 'application/json'
     }
+  })
+}
+
+/**
+ * 获取已有的诊断结果
+ * 后端接口：GET /api/appointments/{appointmentId}/diagnosis
+ * @param {string} appointmentId - 预约ID
+ */
+export const getDiagnosis = (appointmentId) => {
+  return request({
+    url: `/api/appointments/${appointmentId}/diagnosis`,
+    method: 'GET'
   })
 }
 
