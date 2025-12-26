@@ -12,6 +12,8 @@ const service = axios.create({
 // 2. 请求拦截器 (发送请求前做的事，比如加 Token)
 service.interceptors.request.use(
   config => {
+    // 以后做登录功能时，在这里把 token 加到 header 里
+    // config.headers['Authorization'] = 'Bearer ' + token;
     // 从localStorage获取token并添加到请求头
     const token = localStorage.getItem('hospital_token');
     if (token) {

@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.jdbc.CannotGetJdbcConnectionException;
 
 import jakarta.validation.ValidationException;
 import jakarta.validation.ConstraintViolationException;
@@ -33,11 +32,10 @@ public class GlobalExceptionHandler {
         // 打印错误日志到控制台，方便调试
         System.out.println("捕获业务异常: " + e.getMessage());
         
-        // 返回失败的 Result，状态码设为 500 (或者你定义的其他错误码)
         // 这里的 code 是 JSON 里的 code，HTTP 状态码依然是 200
         return Result.error(500, e.getMessage());
     }
-
+        
 
     /**
      * 处理所有不可知的异常
@@ -121,22 +119,3 @@ public class GlobalExceptionHandler {
         return Result.error(ResultCode.FORBIDDEN, e.getMessage());
     }
 
-    /**
-     * 处理数据库连接异常
-     */
-    @ExceptionHandler(CannotGetJdbcConnectionException.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public Result handleDatabaseConnectionException(CannotGetJdbcConnectionException e) {
-        e.printStackTrace();
-        return Result.error(ResultCode.INTERNAL_SERVER_ERROR, "数据库连接失败，请检查数据库服务状态");
-    }
-
-//    /**
-//     * 处理业务异常
-//     */
-//    @ExceptionHandler(BusinessException.class)
-//    @ResponseStatus(HttpStatus.BAD_REQUEST)
-//    public Result handleBusinessException(BusinessException e) {
-//        return Result.error(e.getCode(), e.getMessage());
-//    }
-}

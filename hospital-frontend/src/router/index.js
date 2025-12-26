@@ -1,3 +1,10 @@
+import { createRouter, createWebHistory } from 'vue-router'
+
+// 引入刚才创建的页面组件
+import Login from '../views/Login.vue'
+import UserHome from '../views/UserHome.vue'
+import AdminDashboard from '../views/AdminDashboard.vue'
+import DoctorDashboard from '../views/DoctorDashboard.vue'
 // import { createRouter, createWebHistory } from 'vue-router'
 
 // // 引入刚才创建的页面组件
@@ -139,6 +146,51 @@ import MyPatients from '../views/MyPatients.vue'
 import MyProfile from '../views/MyProfile.vue'
 import MyReports from '../views/MyReports.vue'
 import VisitRecords from '../views/VisitRecords.vue'
+import AdminOrderManagement from "../views/AdminOrderManagement.vue";
+import AdminUserManagement from "../views/AdminUserManagement.vue";
+import AdminAuditLogManagement from "../views/AdminAuditLogManagement.vue";
+import AdminCampusDepartmentManagement from "../views/AdminCampusDepartmentManagement.vue";
+import AdminScheduleManagement from "../views/AdminScheduleManagement.vue";
+import AdminDoctorManagement from "../views/AdminDoctorManagement.vue";
+
+
+const routes = [
+  {
+    path: '/',
+    redirect: '/login' // 默认一进来就跳到登录页
+  },
+  {
+    path: '/login',
+    name: 'Login',
+    component: Login
+  },
+  {
+    path: '/user',
+    name: 'UserHome',
+    component: UserHome
+  },
+  {
+    path: '/admin',
+    name: 'AdminDashboard', // 保持你原命名，避免外部引用破坏
+    component: AdminDashboard,
+    meta: { requiresRole: 'admin' },
+    children: [
+      { path: '', redirect: { name: 'AdminUsers' } },
+
+      { path: 'users', name: 'AdminUsers', component: AdminUserManagement, meta: { title: '用户管理' } },
+      { path: 'doctors', name: 'AdminDoctors', component: AdminDoctorManagement, meta: { title: '医生管理' } },
+
+      { path: 'orders', name: 'AdminOrders', component: AdminOrderManagement, meta: { title: '预约订单管理' } },
+      { path: 'schedule', name: 'AdminSchedule', component: AdminScheduleManagement, meta: { title: '排班管理' } },
+      { path: 'campus', name: 'AdminCampus', component: AdminCampusDepartmentManagement, meta: { title: '院区与科室' } },
+      { path: 'logs', name: 'AdminLogs', component: AdminAuditLogManagement, meta: { title: '日志与审计' } },
+    ]
+
+  },
+  {
+    path: '/doctor',
+    name: 'DoctorDashboard',
+    component: DoctorDashboard
 
 // // ✅ 新增（后台子页面）
 // import AdminOverview from '../views/AdminOverview.vue'
@@ -254,6 +306,7 @@ const router = createRouter({
   routes
 })
 
+export default router
 /**
  * ✅ 简单角色守卫（可按你现有登录逻辑调整）
  * 约定：localStorage.role 存 'user'/'doctor'/'admin'
