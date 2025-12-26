@@ -32,13 +32,6 @@ public class PatientController {
     @GetMapping
     public Result<List<PatientResponse>> getMyPatients(HttpServletRequest request) {
         String userId = (String) request.getAttribute("userId");
-        System.out.println("PatientController.getMyPatients - 从request获取的userId: " + userId);
-        
-        if (userId == null || userId.isEmpty()) {
-            System.err.println("错误：userId为空，无法获取就诊人列表");
-            return Result.error("用户身份验证失败，请重新登录");
-        }
-        
         List<PatientResponse> patients = patientService.getPatientsByUserId(userId);
         return Result.success(patients);
     }
@@ -54,35 +47,6 @@ public class PatientController {
         String userId = (String) request.getAttribute("userId");
         PatientResponse newPatient = patientService.addPatientForUser(userId, addPatientRequest);
         return Result.success(newPatient);
-    }
-
-    /**
-     * 更新就诊人信息
-     * @param request HttpServletRequest，用于获取用户ID
-     * @param patientId 就诊人ID
-     * @param updateRequest 更新请求数据
-     * @return 更新后的就诊人信息
-     */
-    @PutMapping("/{patientId}")
-    public Result<PatientResponse> updatePatient(HttpServletRequest request, 
-                                                 @PathVariable String patientId,
-                                                 @RequestBody AddPatientRequest updateRequest) {
-        String userId = (String) request.getAttribute("userId");
-        PatientResponse updatedPatient = patientService.updatePatient(userId, patientId, updateRequest);
-        return Result.success(updatedPatient);
-    }
-
-    /**
-     * 删除就诊人（删除用户与就诊人的关联关系）
-     * @param request HttpServletRequest，用于获取用户ID
-     * @param patientId 就诊人ID
-     * @return 删除结果
-     */
-    @DeleteMapping("/{patientId}")
-    public Result<String> deletePatient(HttpServletRequest request, @PathVariable String patientId) {
-        String userId = (String) request.getAttribute("userId");
-        patientService.deletePatient(userId, patientId);
-        return Result.success("删除成功");
     }
 }
 

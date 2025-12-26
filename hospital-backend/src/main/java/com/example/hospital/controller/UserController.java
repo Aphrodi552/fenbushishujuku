@@ -2,7 +2,6 @@ package com.example.hospital.controller;
 
 import com.example.hospital.common.Result;
 import com.example.hospital.common.UserLoginToken;
-import com.example.hospital.dto.ChangePasswordRequest;
 import com.example.hospital.dto.UserProfileUpdateRequest;
 import com.example.hospital.entity.User;
 import com.example.hospital.service.UserService;
@@ -48,36 +47,6 @@ public class UserController {
         String userId = (String) request.getAttribute("userId");
         User updatedUser = userService.updateUserProfile(userId, updateRequest);
         return Result.success(updatedUser);
-    }
-
-    /**
-     * 修改用户密码
-     * @param request HttpServletRequest，用于获取用户ID
-     * @param changePasswordRequest 修改密码请求体（包含旧密码和新密码）
-     * @return 操作结果
-     */
-    @UserLoginToken // 需要Token验证
-    @PutMapping("/password")
-    public Result<String> changePassword(HttpServletRequest request, @RequestBody ChangePasswordRequest changePasswordRequest) {
-        String userId = (String) request.getAttribute("userId");
-        System.out.println("UserController.changePassword - 从request获取的userId: " + userId);
-
-        if (userId == null || userId.isEmpty()) {
-            System.err.println("错误：userId为空，无法修改密码");
-            return Result.error("用户身份验证失败，请重新登录");
-        }
-
-        try {
-            boolean success = userService.changePassword(userId, changePasswordRequest);
-            if (success) {
-                return Result.success("密码修改成功");
-            } else {
-                return Result.error("修改密码失败，请重试");
-            }
-        } catch (Exception e) {
-            System.err.println("修改密码异常: " + e.getMessage());
-            return Result.error(e.getMessage());
-        }
     }
 
 }

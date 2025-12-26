@@ -12,7 +12,7 @@ const service = axios.create({
 // 2. 请求拦截器 (发送请求前做的事，比如加 Token)
 service.interceptors.request.use(
   config => {
-    // 从 localStorage 获取 token 并添加到请求头
+    // 从localStorage获取token并添加到请求头
     const token = localStorage.getItem('hospital_token');
     if (token) {
       config.headers['Authorization'] = 'Bearer ' + token;
@@ -38,15 +38,6 @@ service.interceptors.response.use(
   },
   error => {
     console.error('请求出错:', error);
-    // 如果是业务错误（后端返回的错误），尝试获取错误信息
-    if (error.response && error.response.data) {
-      const errorData = error.response.data;
-      // 将错误信息附加到 error 对象上，方便调用方获取
-      error.message = errorData.message || '请求失败';
-      error.code = errorData.code;
-      return Promise.reject(error);
-    }
-    // 网络错误或其他错误
     alert('连接后端失败，请检查后端是否启动');
     return Promise.reject(error);
   }

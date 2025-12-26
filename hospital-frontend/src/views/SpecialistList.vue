@@ -4,7 +4,7 @@
       <div class="header-inner">
         <div class="logo-group" @click="router.push('/user')">
           <span class="logo-icon">🏥</span>
-          <div class="logo-text"><h1>浙江工业大学健行医院</h1><small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small></div>
+          <div class="logo-text"><h1>浙江省人民医院</h1><small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small></div>
         </div>
         <div class="back-home" @click="router.push('/user')"><Icon icon="mdi:home" /> 返回首页</div>
       </div>
@@ -23,67 +23,37 @@
     <div class="campus-tabs-bar">
       <div class="tabs-inner">
         <div class="tabs-list">
-          <div v-for="campus in ['朝晖院区', '屏峰院区']" :key="campus" class="tab-item" :class="{ active: activeCampus === campus }" @click="activeCampus = campus">
+          <div v-for="campus in ['朝晖院区', '望江山院区', '越城院区']" :key="campus" class="tab-item" :class="{ active: activeCampus === campus }" @click="activeCampus = campus">
             {{ campus }}<div class="triangle" v-if="activeCampus === campus"></div>
           </div>
         </div>
         <div class="tab-search-box">
-          <div class="input-inner">
-            <Icon icon="mdi:magnify" class="search-icon" />
-            <input 
-              type="text" 
-              placeholder="请输入专家姓名" 
-              v-model="searchKeyword"
-              @keyup.enter="handleSearch"
-            />
-          </div>
-          <button class="btn-tab-search" @click="handleSearch">搜索</button>
+          <div class="input-inner"><Icon icon="mdi:magnify" class="search-icon" /><input type="text" placeholder="请输入专家姓名" /></div><button class="btn-tab-search">搜索</button>
         </div>
       </div>
     </div>
 
     <main class="main-content">
       <div class="content-container">
-        <div v-if="loading" class="loading-state">
-          <p>加载中...</p>
-        </div>
-        <div v-else>
-          <div class="dept-section" v-for="dept in departmentList" :key="dept.departmentId">
-            <div class="dept-header">
-              <div class="dept-info">
-                <h2 class="dept-title-border">{{ dept.departmentName }}</h2>
-                <p class="dept-desc">{{ dept.departmentIntro || '暂无介绍' }}</p>
-              </div>
-              <div class="see-more">查看更多 <Icon icon="mdi:arrow-right-thin" /></div>
-            </div>
-            <div class="doctor-grid" v-if="dept.doctors && dept.doctors.length > 0">
-              <div class="doctor-card" v-for="doc in dept.doctors" :key="doc.doctorId || doc.name">
-                <div class="doc-photo">
-                  <img :src="doc.photo" :alt="doc.name" @error="handleImageError">
-                </div>
-                <div class="doc-info">
-                  <div class="doc-top">
-                    <span class="doc-name">{{ doc.name }}</span>
-                    <span class="doc-title">{{ doc.title }}</span>
-                  </div>
-                  <div class="doc-dept">{{ dept.departmentName }}</div>
-                  <div class="doc-skill">
-                    <span class="label">擅长：</span>{{ doc.skill || '暂无' }}
-                  </div>
-                  <div class="doc-action">
-                    <button class="btn-see-reviews" @click="openReviews(doc)">
-                      <Icon icon="mdi:comment-quote-outline" /> 查看评价
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div v-else class="no-doctors">
-              <p>该科室暂无医生</p>
-            </div>
+        <div class="dept-section" v-for="dept in departmentList" :key="dept.id">
+          <div class="dept-header">
+            <div class="dept-info"><h2 class="dept-title-border">{{ dept.name }}</h2><p class="dept-desc">{{ dept.desc }}</p></div>
+            <div class="see-more">查看更多 <Icon icon="mdi:arrow-right-thin" /></div>
           </div>
-          <div v-if="departmentList.length === 0 && !loading" class="empty-state">
-            <p>暂无科室信息</p>
+          <div class="doctor-grid">
+            <div class="doctor-card" v-for="doc in dept.doctors" :key="doc.name">
+              <div class="doc-photo"><img :src="doc.photo" :alt="doc.name"></div>
+              <div class="doc-info">
+                <div class="doc-top"><span class="doc-name">{{ doc.name }}</span><span class="doc-title">{{ doc.title }}</span></div>
+                <div class="doc-dept">{{ dept.name }}</div>
+                <div class="doc-skill"><span class="label">擅长：</span>{{ doc.skill }}</div>
+                <div class="doc-action">
+                  <button class="btn-see-reviews" @click="openReviews(doc.name)">
+                    <Icon icon="mdi:comment-quote-outline" /> 查看评价
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -92,35 +62,22 @@
     <div class="modal-overlay" v-if="showReviewModal">
       <div class="modal-box review-list-modal fade-in-up">
         <div class="modal-header">
-          <div class="doctor-header-info">
-            <h3>{{ currentDoctorName }} 的患者评价</h3>
-            <div v-if="averageRating > 0" class="rating-summary">
-              <div class="rating-stars">
-                <Icon v-for="n in 5" :key="n" :icon="n <= Math.round(averageRating) ? 'mdi:star' : 'mdi:star-outline'" :class="n <= Math.round(averageRating) ? 'star-yellow' : 'star-gray'" />
-              </div>
-              <span class="rating-score">{{ averageRating.toFixed(1) }}</span>
-              <span class="rating-count">（{{ currentDoctorReviews.length }}条评价）</span>
-            </div>
-          </div>
+          <h3>{{ currentDoctorName }} 的患者评价</h3>
           <button class="btn-close" @click="showReviewModal = false"><Icon icon="mdi:close" /></button>
         </div>
         <div class="modal-body review-body">
-          <div v-if="loadingReviews" class="loading-reviews">
-            <Icon icon="mdi:loading" class="loading-icon" />
-            <p>加载中...</p>
-          </div>
-          <div v-else-if="currentDoctorReviews.length === 0" class="no-reviews">
+          <div v-if="currentDoctorReviews.length === 0" class="no-reviews">
             <Icon icon="mdi:message-off-outline" class="gray-icon" />
             <p>该医生暂无评价</p>
           </div>
           <div v-else class="review-scroll">
-            <div v-for="rev in currentDoctorReviews" :key="rev.reviewId" class="review-item">
+            <div v-for="rev in currentDoctorReviews" :key="rev.id" class="review-item">
               <div class="rev-header">
-                <span class="rev-user">患者{{ rev.reviewId.substring(0, 6) }}</span>
+                <span class="rev-user">{{ rev.patientName }}</span>
                 <div class="rev-stars">
-                  <Icon v-for="n in 5" :key="n" :icon="n <= rev.rating ? 'mdi:star' : 'mdi:star-outline'" :class="n <= rev.rating ? 'star-yellow' : 'star-gray'" />
+                  <Icon v-for="n in rev.rating" :key="n" icon="mdi:star" class="star-yellow" />
                 </div>
-                <span class="rev-time">{{ formatReviewDate(rev.createdAt) }}</span>
+                <span class="rev-time">{{ rev.time }}</span>
               </div>
               <div class="rev-content">{{ rev.content }}</div>
             </div>
@@ -130,212 +87,54 @@
     </div>
 
     <footer class="app-footer">
-      <div class="footer-bottom-bar">Copyright © 2025 浙江工业大学健行医院网站版权所有</div>
+      <div class="footer-bottom-bar">Copyright © 2025 浙江省人民医院网站版权所有</div>
     </footer>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
-import { getDoctors } from '../api/doctor';
-import { getDepartmentList } from '../api/hospital';
-import { getReviewsByDoctorId } from '../api/review';
 
 const router = useRouter();
 const activeCampus = ref('朝晖院区');
-const searchKeyword = ref('');
 const showReviewModal = ref(false);
 const currentDoctorName = ref('');
-const currentDoctorId = ref('');
 const allReviews = ref([]);
-const loading = ref(false);
-const loadingReviews = ref(false);
-
-// 院区ID映射
-const campusIdMap = {
-  '朝晖院区': '1',
-  '屏峰院区': '2'
-};
-
-// 科室列表和医生数据
-const departmentList = ref([]);
-const allDoctors = ref([]);
 
 // 打开评价弹窗
-const openReviews = async (doctor) => {
-  currentDoctorName.value = doctor.name;
-  currentDoctorId.value = doctor.doctorId;
+const openReviews = (doctorName) => {
+  currentDoctorName.value = doctorName;
+  // 读取本地存储
+  const saved = localStorage.getItem('hospital_reviews');
+  allReviews.value = saved ? JSON.parse(saved) : [];
   showReviewModal.value = true;
-  await loadDoctorReviews(doctor.doctorId);
-};
-
-// 加载医生的评价
-const loadDoctorReviews = async (doctorId) => {
-  if (!doctorId) {
-    allReviews.value = [];
-    return;
-  }
-
-  loadingReviews.value = true;
-  try {
-    const res = await getReviewsByDoctorId(doctorId);
-    console.log('获取医生评价API响应:', res);
-    if (res.code === 200 && res.data) {
-      allReviews.value = res.data.map(review => ({
-        reviewId: review.reviewId,
-        rating: review.rating || 5,
-        content: review.content || '',
-        createdAt: review.createdAt,
-        doctorName: review.doctorName || currentDoctorName.value
-      }));
-      console.log('转换后的评价列表:', allReviews.value);
-    } else {
-      console.error('获取医生评价失败:', res.message);
-      allReviews.value = [];
-    }
-  } catch (error) {
-    console.error('获取医生评价失败:', error);
-    alert(error.message || '获取评价失败，请检查网络连接');
-    allReviews.value = [];
-  } finally {
-    loadingReviews.value = false;
-  }
 };
 
 // 筛选当前医生的评价
 const currentDoctorReviews = computed(() => {
-  return allReviews.value;
+  return allReviews.value.filter(r => r.doctorName === currentDoctorName.value);
 });
 
-// 计算平均评分
-const averageRating = computed(() => {
-  if (currentDoctorReviews.value.length === 0) {
-    return 0;
+const departmentList = [
+  {
+    id: 1, name: '急诊医学科', desc: '专业优势：严重多发伤、重症急性胰腺炎、心肺脑复苏等。',
+    doctors: [
+      { name: '蔡文伟', title: '主任医师', photo: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=200&auto=format&fit=crop', skill: '急性腹痛、严重多发伤、急性胰腺炎...' },
+      { name: '李茜', title: '主任医师', photo: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?q=80&w=200&auto=format&fit=crop', skill: '各种重症疾病如多脏器功能衰竭...' },
+      { name: '郑悦亮', title: '主任医师', photo: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?q=80&w=200&auto=format&fit=crop', skill: '危重患者的诊治，对重症胰腺炎...' },
+      { name: '张可', title: '副主任医师', photo: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=200&auto=format&fit=crop', skill: '危重患者的诊治，对心脏骤停的抢救...' }
+    ]
+  },
+  {
+    id: 2, name: '重症医学科', desc: '专业优势：集急性肾损伤(AKI)的早期预警、诊断与治疗。',
+    doctors: [
+      { name: '杨向红', title: '主任医师', photo: 'https://images.unsplash.com/photo-1594824476969-519478cae374?q=80&w=200&auto=format&fit=crop', skill: '各种急危重病人的抢救治疗...' },
+      { name: '孙仁华', title: '主任医师', photo: 'https://images.unsplash.com/photo-1612531386530-97286d74c2ea?q=80&w=200&auto=format&fit=crop', skill: '各种急重病人的诊治...' }
+    ]
   }
-  const sum = currentDoctorReviews.value.reduce((acc, rev) => acc + (rev.rating || 0), 0);
-  return sum / currentDoctorReviews.value.length;
-});
-
-// 格式化评价日期
-const formatReviewDate = (dateStr) => {
-  if (!dateStr) return '';
-  try {
-    const date = new Date(dateStr);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
-  } catch (e) {
-    return dateStr;
-  }
-};
-
-// 加载科室列表
-const loadDepartments = async () => {
-  const hospitalId = campusIdMap[activeCampus.value];
-  if (!hospitalId) return;
-  
-  try {
-    const res = await getDepartmentList(hospitalId);
-    if (res.code === 200 && res.data) {
-      departmentList.value = res.data.map(dept => ({
-        ...dept,
-        doctors: []
-      }));
-    }
-  } catch (error) {
-    console.error('获取科室列表失败:', error);
-    departmentList.value = [];
-  }
-};
-
-// 加载医生列表
-const loadDoctors = async () => {
-  loading.value = true;
-  const hospitalId = campusIdMap[activeCampus.value];
-  if (!hospitalId) {
-    loading.value = false;
-    return;
-  }
-  
-  try {
-    const keyword = searchKeyword.value && searchKeyword.value.trim() 
-      ? searchKeyword.value.trim() 
-      : null;
-    
-    const res = await getDoctors(hospitalId, null, keyword);
-    if (res.code === 200 && res.data) {
-      allDoctors.value = res.data;
-      // 按科室分组
-      groupDoctorsByDepartment();
-    } else {
-      allDoctors.value = [];
-      departmentList.value.forEach(dept => {
-        dept.doctors = [];
-      });
-    }
-  } catch (error) {
-    console.error('获取医生列表失败:', error);
-    allDoctors.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 按科室分组医生
-const groupDoctorsByDepartment = () => {
-  // 为每个科室分配医生
-  departmentList.value.forEach(dept => {
-    // 如果医生有 departmentId，按科室过滤；否则显示所有医生
-    if (allDoctors.value.length > 0 && allDoctors.value[0].departmentId) {
-      dept.doctors = allDoctors.value
-        .filter(doctor => doctor.departmentId === dept.departmentId)
-        .map(doctor => ({
-          doctorId: doctor.doctorId,
-          name: doctor.doctorName,
-          title: doctor.title || '医师',
-          photo: doctor.avatarUrl || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=200&auto=format&fit=crop',
-          skill: doctor.doctorIntro || '暂无介绍'
-        }));
-    } else {
-      // 暂时将所有医生都显示，因为医生表中没有 departmentId
-      dept.doctors = allDoctors.value.map(doctor => ({
-        doctorId: doctor.doctorId,
-        name: doctor.doctorName,
-        title: doctor.title || '医师',
-        photo: doctor.avatarUrl || 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=200&auto=format&fit=crop',
-        skill: doctor.doctorIntro || '暂无介绍'
-      }));
-    }
-  });
-};
-
-// 搜索处理
-const handleSearch = () => {
-  loadDoctors();
-};
-
-// 处理图片加载错误
-const handleImageError = (event) => {
-  event.target.src = 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?q=80&w=200&auto=format&fit=crop';
-};
-
-// 监听院区切换
-watch(activeCampus, () => {
-  searchKeyword.value = '';
-  loadDepartments();
-  loadDoctors();
-});
-
-// 组件挂载时加载数据
-onMounted(() => {
-  loadDepartments();
-  loadDoctors();
-});
+];
 </script>
 
 <style scoped>
@@ -386,70 +185,19 @@ onMounted(() => {
 /* 弹窗样式 */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center; }
 .modal-box { background: white; width: 600px; border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; max-height: 80vh; }
-.modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: flex-start; background: #fcfcfc; }
+.modal-header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fcfcfc; }
 .modal-header h3 { margin: 0; font-size: 1.2rem; }
 .btn-close { background: none; border: none; cursor: pointer; font-size: 1.5rem; color: #999; }
-.review-body { padding: 20px; overflow-y: auto; max-height: 500px; }
-.loading-reviews { text-align: center; padding: 40px; color: #999; }
-.loading-icon { font-size: 2rem; animation: spin 1s linear infinite; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.review-body { padding: 20px; overflow-y: auto; }
 .no-reviews { text-align: center; padding: 40px; color: #999; }
 .gray-icon { font-size: 3rem; margin-bottom: 10px; }
 .review-item { border-bottom: 1px dashed #eee; padding-bottom: 15px; margin-bottom: 15px; }
-.review-item:last-child { border-bottom: none; }
-.rev-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.rev-header { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
 .rev-user { font-weight: bold; color: #333; }
-.rev-stars { display: flex; gap: 2px; }
 .star-yellow { color: #ffca28; font-size: 0.9rem; }
-.star-gray { color: #ddd; font-size: 0.9rem; }
-.rev-time { color: #999; font-size: 0.85rem; margin-left: auto; }
-.rev-content { color: #666; line-height: 1.6; }
-.doctor-header-info { flex: 1; }
-.rating-summary { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
-.rating-stars { display: flex; gap: 2px; }
-.rating-score { font-size: 1.2rem; font-weight: bold; color: #ff9800; }
-.rating-count { font-size: 0.9rem; color: #666; }
 .rev-time { margin-left: auto; font-size: 0.8rem; color: #999; }
 .rev-content { color: #555; font-size: 0.95rem; line-height: 1.5; }
 .app-footer { background: #1a3a6e; color: rgba(255,255,255,0.6); text-align: center; padding: 20px; margin-top: 50px; }
-
-/* 加载和空状态 */
-.loading-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #999;
-  font-size: 1.1rem;
-}
-.empty-state {
-  text-align: center;
-  padding: 80px 20px;
-  color: #999;
-}
-.no-doctors {
-  text-align: center;
-  padding: 40px 20px;
-  color: #999;
-  background: #fcfcfc;
-}
-
-/* 加载和空状态 */
-.loading-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #999;
-  font-size: 1.1rem;
-}
-.empty-state {
-  text-align: center;
-  padding: 80px 20px;
-  color: #999;
-}
-.no-doctors {
-  text-align: center;
-  padding: 40px 20px;
-  color: #999;
-  background: #fcfcfc;
-}
 </style>
 
 <!-- <template>
@@ -460,7 +208,7 @@ onMounted(() => {
           <div class="logo-group" @click="router.push('/user')">
             <span class="logo-icon">🏥</span>
             <div class="logo-text">
-              <h1>浙江工业大学健行医院</h1>
+              <h1>浙江省人民医院</h1>
               <small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small>
             </div>
           </div>
@@ -558,7 +306,7 @@ onMounted(() => {
               <div class="logo-placeholder">
                 <Icon icon="mdi:hospital-building" class="logo-ico" />
                 <div class="logo-txt">
-                  <h3>浙江工业大学健行医院</h3>
+                  <h3>浙江省人民医院</h3>
                   <small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small>
                 </div>
               </div>
@@ -571,8 +319,8 @@ onMounted(() => {
           <div class="footer-col col-mid">
             <h3 class="footer-title">托管医院</h3>
             <ul class="footer-link-list">
-              <li><span class="dot">●</span> 浙江工业大学健行医院淳安分院</li>
-              <li><span class="dot">●</span> 浙江工业大学健行医院天台分院</li>
+              <li><span class="dot">●</span> 浙江省人民医院淳安分院</li>
+              <li><span class="dot">●</span> 浙江省人民医院天台分院</li>
             </ul>
           </div>
           <div class="footer-col col-right">
@@ -588,7 +336,7 @@ onMounted(() => {
           </div>
         </div>
         <div class="footer-bottom-bar">
-          Copyright © 2025 浙江工业大学健行医院网站版权所有 | 浙ICP备06015436号
+          Copyright © 2025 浙江省人民医院网站版权所有 | 浙ICP备06015436号
           <span class="tech-support">技术支持：杭州触梦智能科技有限公司</span>
         </div>
       </footer>

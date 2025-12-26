@@ -6,7 +6,7 @@
           <div class="logo-group" @click="router.push('/user')">
             <span class="logo-icon">🏥</span>
             <div class="logo-text">
-              <h1>浙江工业大学健行医院</h1>
+              <h1>浙江省人民医院</h1>
               <small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small>
             </div>
           </div>
@@ -77,12 +77,7 @@
   
           <div class="record-list-area">
             
-            <div v-if="loading" class="empty-state">
-              <img src="https://cdn-icons-png.flaticon.com/512/7486/7486754.png" alt="Loading" class="empty-img">
-              <p>加载中，请稍候...</p>
-            </div>
-            
-            <div v-else-if="filteredRecords.length === 0" class="empty-state">
+            <div v-if="filteredRecords.length === 0" class="empty-state">
               <img src="https://cdn-icons-png.flaticon.com/512/7486/7486754.png" alt="No Data" class="empty-img">
               <p>未查询到相关预约记录</p>
               <button class="btn-go-book" @click="router.push('/appointment')">去预约挂号</button>
@@ -113,7 +108,7 @@
                   <button class="btn-outline" v-if="record.status === '已就诊'">查看报告</button>
                   <button class="btn-outline" v-if="record.status === '已就诊'">电子发票</button>
                   
-                  <button class="btn-outline" v-if="record.status === '未就诊'" @click="handleCancelAppointment(record)">取消预约</button>
+                  <button class="btn-outline" v-if="record.status === '未就诊'">取消预约</button>
                   <button class="btn-primary" v-if="record.status === '未就诊'">去支付</button>
                   
                   <button class="btn-disabled" v-if="record.status === '已过期' || record.status === '已取消'" disabled>重新挂号</button>
@@ -134,7 +129,7 @@
               <div class="logo-placeholder">
                 <Icon icon="mdi:hospital-building" class="logo-ico" />
                 <div class="logo-txt">
-                  <h3>浙江工业大学健行医院</h3>
+                  <h3>浙江省人民医院</h3>
                   <small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small>
                 </div>
               </div>
@@ -147,9 +142,9 @@
           <div class="footer-col col-mid">
             <h3 class="footer-title">托管医院</h3>
             <ul class="footer-link-list">
-              <li><span class="dot">●</span> 浙江工业大学健行医院淳安分院</li>
-              <li><span class="dot">●</span> 浙江工业大学健行医院天台分院</li>
-              <li><span class="dot">●</span> 浙江工业大学健行医院浙东南院区</li>
+              <li><span class="dot">●</span> 浙江省人民医院淳安分院</li>
+              <li><span class="dot">●</span> 浙江省人民医院天台分院</li>
+              <li><span class="dot">●</span> 浙江省人民医院浙东南院区</li>
             </ul>
           </div>
           <div class="footer-col col-right">
@@ -159,7 +154,7 @@
               <li><span class="dot">●</span> 浙江省卫生健康委员会</li>
             </ul>
             <div class="copyright-text">
-              <p>Copyright © 2025 浙江工业大学健行医院网站版权所有</p>
+              <p>Copyright © 2025 浙江省人民医院网站版权所有</p>
             </div>
           </div>
         </div>
@@ -169,108 +164,54 @@
   </template>
   
   <script setup>
-  import { ref, computed, onMounted } from 'vue';
+  import { ref, computed } from 'vue';
   import { useRouter } from 'vue-router';
   import { Icon } from '@iconify/vue';
-  import { getMyAppointments, cancelAppointment } from '../api/appointment';
-  import { getMyPatients } from '../api/patient';
   
   const router = useRouter();
   
   // --- 状态管理 ---
   const currentTab = ref('all');
-  const loading = ref(false);
   const filters = ref({
     patient: 'all',
     campus: 'all',
     keyword: ''
   });
   
-  // 动态加载的就诊人列表
-  const patients = ref([]);
+  const patients = [
+    { id: 1, name: '陆露露' },
+    { id: 2, name: '张大爷' }
+  ];
   
-  // 动态加载的预约记录
-  const allRecords = ref([]);
+  const tabs = [
+    { key: 'all', name: '全部', count: 4 },
+    { key: 'unvisited', name: '未就诊', count: 1 },
+    { key: 'visited', name: '已就诊', count: 1 },
+    { key: 'canceled', name: '已取消', count: 1 },
+    { key: 'expired', name: '已过期', count: 1 },
+  ];
   
-  // 动态计算 tab 的 count
-  const tabs = computed(() => {
-    const allCount = allRecords.value.length;
-    const unvisitedCount = allRecords.value.filter(r => r.status === '未就诊').length;
-    const visitedCount = allRecords.value.filter(r => r.status === '已就诊').length;
-    const canceledCount = allRecords.value.filter(r => r.status === '已取消').length;
-    const expiredCount = allRecords.value.filter(r => r.status === '已过期').length;
-    
-    return [
-      { key: 'all', name: '全部', count: allCount },
-      { key: 'unvisited', name: '未就诊', count: unvisitedCount },
-      { key: 'visited', name: '已就诊', count: visitedCount },
-      { key: 'canceled', name: '已取消', count: canceledCount },
-      { key: 'expired', name: '已过期', count: expiredCount },
-    ];
-  });
-  
-  // 加载就诊人列表
-  const loadPatients = async () => {
-    try {
-      const res = await getMyPatients();
-      if (res.code === 200 && res.data) {
-        patients.value = res.data.map(p => ({
-          id: p.patientId,
-          name: p.name
-        }));
-      }
-    } catch (error) {
-      console.error('获取就诊人列表失败:', error);
-      patients.value = [];
+  const allRecords = [
+    { 
+      id: 101, campus: '朝晖院区', time: '2025-12-28 上午', status: '未就诊', 
+      doctor: '汪望月', title: '主任医师', dept: '消化内科', patientName: '陆露露', price: '30.00'
+    },
+    { 
+      id: 102, campus: '朝晖院区', time: '2025-11-10 下午', status: '已就诊', 
+      doctor: '孙学锐', title: '主任医师', dept: '儿科', patientName: '张大爷', price: '50.00'
+    },
+    { 
+      id: 103, campus: '屏峰院区', time: '2025-10-05 上午', status: '已取消', 
+      doctor: '李茜', title: '主任医师', dept: '急诊医学科', patientName: '陆露露', price: '30.00'
+    },
+    { 
+      id: 104, campus: '朝晖院区', time: '2024-12-01 上午', status: '已过期', 
+      doctor: '潘文胜', title: '主任医师', dept: '消化内科', patientName: '陆露露', price: '30.00'
     }
-  };
-  
-  // 加载预约记录
-  const loadAppointments = async () => {
-    loading.value = true;
-    try {
-      const res = await getMyAppointments();
-      console.log('预约记录API响应:', res);
-      if (res.code === 200 && res.data) {
-        // 转换数据格式以匹配前端显示
-        allRecords.value = res.data.map(appointment => {
-          // 格式化时间：将日期和时间段组合
-          const timeStr = appointment.visitDate 
-            ? `${appointment.visitDate} ${appointment.timeSlot || ''}`.trim()
-            : (appointment.createdAt ? appointment.createdAt.split('T')[0] : '');
-          
-          // 格式化价格
-          const priceStr = appointment.price 
-            ? appointment.price.toFixed(2) 
-            : '30.00';
-          
-          return {
-            id: appointment.appointmentId,
-            campus: appointment.hospitalName || '未知院区',
-            time: timeStr,
-            status: appointment.status || '未知',
-            doctor: appointment.doctorName || '未知',
-            title: appointment.doctorTitle || '',
-            dept: appointment.departmentName || '未知科室', // 从医生职称或简介中提取的科室名称
-            patientName: appointment.patientName || '未知',
-            price: priceStr
-          };
-        });
-        console.log('转换后的预约记录列表:', allRecords.value);
-      } else {
-        console.error('获取预约记录失败:', res.message);
-        allRecords.value = [];
-      }
-    } catch (error) {
-      console.error('获取预约记录失败:', error);
-      allRecords.value = [];
-    } finally {
-      loading.value = false;
-    }
-  };
+  ];
   
   const filteredRecords = computed(() => {
-    return allRecords.value.filter(item => {
+    return allRecords.filter(item => {
       if (currentTab.value !== 'all') {
         if (currentTab.value === 'unvisited' && item.status !== '未就诊') return false;
         if (currentTab.value === 'visited' && item.status !== '已就诊') return false;
@@ -291,36 +232,6 @@
     if (status === '已过期') return 'status-dark';
     return '';
   };
-  
-  // 取消预约
-  const handleCancelAppointment = async (record) => {
-    if (!confirm(`确定要取消预约吗？\n就诊人：${record.patientName}\n医生：${record.doctor}\n时间：${record.time}`)) {
-      return;
-    }
-    
-    loading.value = true;
-    try {
-      const res = await cancelAppointment(record.id);
-      if (res.code === 200) {
-        alert('预约已取消');
-        // 重新加载预约记录列表
-        await loadAppointments();
-      } else {
-        alert(res.message || '取消预约失败，请重试');
-      }
-    } catch (error) {
-      console.error('取消预约失败:', error);
-      alert(error.message || '取消预约失败，请检查网络连接');
-    } finally {
-      loading.value = false;
-    }
-  };
-  
-  // 初始化加载数据
-  onMounted(() => {
-    loadPatients();
-    loadAppointments();
-  });
   </script>
   
   <style scoped>

@@ -1,64 +1,81 @@
 package com.example.hospital.controller;
 
-import com.example.hospital.common.PassToken;
 import com.example.hospital.common.Result;
-import com.example.hospital.dto.DoctorResponse;
+import com.example.hospital.common.UserLoginToken;
+import com.example.hospital.dto.ChangePasswordRequest;
+import com.example.hospital.dto.DoctorProfileResponse;
+import com.example.hospital.dto.DoctorProfileUpdateRequest;
+import com.example.hospital.entity.Doctor;
 import com.example.hospital.service.DoctorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 医生控制器
  */
 @RestController
-@RequestMapping("/api/doctors")
-@CrossOrigin
+@RequestMapping("/api/doctor")
 public class DoctorController {
 
     @Autowired
     private DoctorService doctorService;
-    
-    // 添加构造函数用于调试
-    public DoctorController() {
-        System.out.println("DoctorController 被实例化了！");
+
+    /**
+     * 获取当前登录医生的个人资料
+     * @param request HttpServletRequest，用于获取拦截器中存入的用户ID
+     * @return 医生完整资料（包含医院和科室信息）
+     */
+    @UserLoginToken // 需要Token验证
+    @GetMapping("/profile")
+    public Result<DoctorProfileResponse> getDoctorProfile(HttpServletRequest request) {
+        // 从request中获取由拦截器注入的用户ID
+        String userId = (String) request.getAttribute("userId");
+        DoctorProfileResponse doctorProfile = doctorService.getDoctorProfile(userId);
+        return Result.success(doctorProfile);
     }
 
     /**
-     * 获取医生列表（支持按院区、科室、关键词搜索）
-     * @param hospitalId 院区ID（可选）
-     * @param departmentId 科室ID（可选）
-     * @param keyword 搜索关键词（医生姓名，可选）
-     * @return 医生列表
+     * 更新当前登录医生的个人资料
+     * @param request HttpServletRequest
+     * @param updateRequest 包含更新信息的数据体
+     * @return 更新后的医生完整资料
      */
-    @PassToken
-    @GetMapping
-    public Result<List<DoctorResponse>> getDoctors(
-            @RequestParam(required = false) String hospitalId,
-            @RequestParam(required = false) String departmentId,
-            @RequestParam(required = false) String keyword) {
-        
-        System.out.println("前端正在请求医生列表... hospitalId: " + hospitalId + ", departmentId: " + departmentId + ", keyword: " + keyword);
-        
-        List<DoctorResponse> doctors = doctorService.getDoctors(hospitalId, departmentId, keyword);
-        return Result.success(doctors);
+    @UserLoginToken // 需要Token验证
+    @PutMapping("/profile")
+    public Result<DoctorProfileResponse> updateDoctorProfile(HttpServletRequest request, @RequestBody DoctorProfileUpdateRequest updateRequest) {
+        String userId = (String) request.getAttribute("userId");
+        Doctor updatedDoctor = doctorService.updateDoctorProfile(userId, updateRequest);
+        // 返回更新后的完整资料
+        DoctorProfileResponse doctorProfile = doctorService.getDoctorProfile(userId);
+        return Result.success(doctorProfile);
     }
 
     /**
-     * 根据医生ID获取医生详情
-     * @param doctorId 医生ID
-     * @return 医生信息
+     * 修改当前登录医生的密码
+     * @param request HttpServletRequest
+     * @param changePasswordRequest 包含旧密码和新密码
+     * @return 修改结果
      */
-    @PassToken
-    @GetMapping("/{doctorId}")
-    public Result<DoctorResponse> getDoctorById(@PathVariable String doctorId) {
-        System.out.println("前端正在请求医生详情... doctorId: " + doctorId);
-        DoctorResponse doctor = doctorService.getDoctorById(doctorId);
-        if (doctor == null) {
-            return Result.error("医生不存在");
+    @UserLoginToken
+    @PostMapping("/change-password")
+    public Result<String> changePassword(HttpServletRequest request, @RequestBody ChangePasswordRequest changePasswordRequest) {
+        String userId = (String) request.getAttribute("userId");
+
+        if (userId == null || userId.isEmpty()) {
+            return Result.error("用户身份验证失败，请重新登录");
         }
-        return Result.success(doctor);
+
+        try {
+            boolean success = doctorService.changePassword(userId, changePasswordRequest);
+            if (success) {
+                return Result.success("密码修改成功");
+            } else {
+                return Result.error("修改密码失败，请重试");
+            }
+        } catch (Exception e) {
+            return Result.error(e.getMessage());
+        }
     }
 }
-

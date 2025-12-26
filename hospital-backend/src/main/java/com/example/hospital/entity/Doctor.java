@@ -11,7 +11,7 @@ public class Doctor {
     private String doctorId;     // 主键
     private String userId;       // 外键（User.user_id）
     private String hospitalId;   // 分片键（对应表中定义的所属院区） [cite: 27]
-    private String departmentId; // 外键（Department.department_id），医生所属科室
+    private String departmentId; // 外键（Department.department_id）
     private String doctorName;   // 姓名
     private String doctorGender; // 取值限定：'男'/'女'
     private String doctorIdcard; // 非空且唯一

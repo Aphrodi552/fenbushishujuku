@@ -6,7 +6,7 @@
         <div class="logo-group" @click="router.push('/user')">
           <span class="logo-icon">🏥</span>
           <div class="logo-text">
-            <h1>浙江工业大学健行医院</h1>
+            <h1>浙江省人民医院</h1>
             <small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small>
           </div>
         </div>
@@ -68,9 +68,7 @@
 
         <div v-if="currentStep === 1" class="step-content fade-in">
           <h2 class="step-title">请选择就诊院区</h2>
-          <div v-if="loading" class="loading-tip">加载中...</div>
-          <div v-else-if="campuses.length === 0" class="empty-tip">暂无院区信息</div>
-          <div v-else class="campus-grid">
+          <div class="campus-grid">
             <div v-for="campus in campuses" :key="campus.id" class="campus-card" @click="selectCampus(campus)">
               <img :src="campus.img" alt="campus" class="campus-img">
               <div class="campus-info">
@@ -98,11 +96,9 @@
               </div>
             </div>
             <div class="dept-main-list">
-              <div v-if="loading" class="loading-tip">加载中...</div>
-              <div v-else-if="currentDepts.length === 0" class="empty-tip">暂无科室信息</div>
-              <div v-else class="grid-wrapper">
-                <div v-for="dept in currentDepts" :key="dept.departmentId" class="dept-item" @click="selectDept(dept)">
-                  {{ dept.departmentName }}
+              <div class="grid-wrapper">
+                <div v-for="dept in currentDepts" :key="dept" class="dept-item" @click="selectDept(dept)">
+                  {{ dept }}
                 </div>
               </div>
             </div>
@@ -137,9 +133,8 @@
           </div>
 
           <div class="doctor-list-wrapper">
-            <div v-if="loading" class="empty-tip">加载中...</div>
-            <div v-else-if="filteredDoctors.length === 0" class="empty-tip">当前暂无医生信息</div>
-            <div v-else v-for="doc in filteredDoctors" :key="doc.id" class="doctor-row">
+            <div v-if="filteredDoctors.length === 0" class="empty-tip">当前日期暂无排班医生</div>
+            <div v-for="doc in filteredDoctors" :key="doc.id" class="doctor-row">
               <div class="doc-left">
                 <img :src="doc.photo" class="avatar" />
                 <div class="doc-basic">
@@ -202,22 +197,22 @@
                   <td class="td-period">上午</td>
                   <td v-for="(day, i) in weekData" :key="'am-'+i" class="td-cell">
                     <div v-if="hasSlot(selectedDoctor, day.date, 'am')">
-                      <button class="btn-slot available" @click="selectSlot(day, 'am')">
+                      <button class="btn-slot available" @click="selectSlot(day, '上午')">
                         挂号 <span class="price">￥{{ selectedDoctor.price }}</span>
                       </button>
                     </div>
-                    <div v-else class="empty-slot">无号</div>
+                    <div v-else class="empty-slot"></div>
                   </td>
                 </tr>
                 <tr>
                   <td class="td-period">下午</td>
                   <td v-for="(day, i) in weekData" :key="'pm-'+i" class="td-cell">
                     <div v-if="hasSlot(selectedDoctor, day.date, 'pm')">
-                      <button class="btn-slot available" @click="selectSlot(day, 'pm')">
+                      <button class="btn-slot available" @click="selectSlot(day, '下午')">
                         挂号 <span class="price">￥{{ selectedDoctor.price }}</span>
                       </button>
                     </div>
-                    <div v-else class="empty-slot">无号</div>
+                    <div v-else class="empty-slot"></div>
                   </td>
                 </tr>
               </tbody>
@@ -232,12 +227,7 @@
           </div>
           
           <div class="patient-selection-container">
-            <div v-if="loadingPatients" class="loading-tip">加载就诊人列表中...</div>
-            <div v-else-if="patientList.length === 0 && !showAddForm" class="empty-tip">
-              <Icon icon="mdi:account-group-outline" class="empty-icon" />
-              <p>您还没有添加就诊人，请先添加就诊人</p>
-            </div>
-            <div v-else class="saved-patient-list">
+            <div class="saved-patient-list">
               <div 
                 v-for="p in patientList" 
                 :key="p.id" 
@@ -263,44 +253,32 @@
               <h3 class="form-title">添加新就诊人</h3>
               <div class="form-grid">
                 <div class="form-group">
-                  <label>姓名 <span class="required">*</span></label>
+                  <label>姓名</label>
                   <input type="text" v-model="newPatient.name" placeholder="请输入真实姓名">
                 </div>
                 <div class="form-group">
-                  <label>身份证号 <span class="required">*</span></label>
-                  <input type="text" v-model="newPatient.idCard" placeholder="请输入18位身份证号" maxlength="18">
+                  <label>身份证号</label>
+                  <input type="text" v-model="newPatient.idCard" placeholder="请输入身份证号">
                 </div>
                 <div class="form-group">
-                  <label>手机号码 <span class="required">*</span></label>
-                  <input type="text" v-model="newPatient.phone" placeholder="请输入11位手机号码" maxlength="11">
+                  <label>手机号码</label>
+                  <input type="text" v-model="newPatient.phone" placeholder="请输入手机号码">
                 </div>
                 <div class="form-group">
-                  <label>出生日期 <span class="required">*</span></label>
+                  <label>出生日期</label>
                   <input type="date" v-model="newPatient.dob">
                 </div>
                 <div class="form-group">
-                  <label>性别 <span class="required">*</span></label>
+                  <label>性别</label>
                   <select v-model="newPatient.gender">
                     <option value="男">男</option>
                     <option value="女">女</option>
                   </select>
                 </div>
-                <div class="form-group">
-                  <label>关系</label>
-                  <select v-model="newPatient.relation">
-                    <option value="本人">本人</option>
-                    <option value="父母">父母</option>
-                    <option value="子女">子女</option>
-                    <option value="配偶">配偶</option>
-                    <option value="其他">其他</option>
-                  </select>
-                </div>
               </div>
               <div class="form-actions">
-                <button class="btn-cancel-add" @click="showAddForm = false" :disabled="loadingPatients">取消</button>
-                <button class="btn-save-add" @click="addNewPatient" :disabled="loadingPatients">
-                  {{ loadingPatients ? '保存中...' : '保存并使用' }}
-                </button>
+                <button class="btn-cancel-add" @click="showAddForm = false">取消</button>
+                <button class="btn-save-add" @click="addNewPatient">保存并使用</button>
               </div>
             </div>
 
@@ -363,20 +341,15 @@
     </main>
 
     <footer class="app-footer">
-      <div class="footer-bottom-bar">Copyright © 2025 浙江工业大学健行医院网站版权所有</div>
+      <div class="footer-bottom-bar">Copyright © 2025 浙江省人民医院网站版权所有</div>
     </footer>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { Icon } from '@iconify/vue';
-import { getAllHospitals, getDepartmentList } from '../api/hospital';
-import { getDoctors } from '../api/doctor';
-import { getSchedules } from '../api/schedule';
-import { getMyPatients, addPatient } from '../api/patient';
-import { createAppointment } from '../api/appointment';
 
 const router = useRouter();
 const currentStep = ref(1);
@@ -384,173 +357,29 @@ const bookingMode = ref('doctor');
 const activeCategory = ref('内科');
 const selectedDateIndex = ref(0);
 const selectedDoctor = ref({}); 
-const loading = ref(false);
-
-// 院区ID映射
-const campusIdMap = {
-  '朝晖院区': '1',
-  '屏峰院区': '2'
-};
 
 // 暂存预约数据
 const bookingData = ref({
-  campusId: '',
   campusName: '',
-  deptId: '',
   deptName: '',
-  doctorId: '', // 添加医生ID
   doctorName: '',
   doctorTitle: '',
   price: 0,
   date: '',
   week: '',
-  period: '',
-  scheduleId: '', // 添加排班ID
-  timeSlot: '', // 时间段（如：08:00-10:00）
-  patientId: '', // 就诊人ID
-  patientName: '' // 就诊人姓名
+  period: ''
 });
 
-// --- 数据加载 ---
-const campuses = ref([]);
-const departmentList = ref([]);
-const doctorList = ref([]);
-
-// 加载院区列表
-const loadHospitals = async () => {
-  loading.value = true;
-  try {
-    const res = await getAllHospitals();
-    if (res.code === 200 && res.data) {
-      campuses.value = res.data.map(hospital => ({
-        id: hospital.hospitalId,
-        name: hospital.hospitalName,
-        addr: hospital.hospitalAddress || '地址待补充',
-        img: 'https://images.unsplash.com/photo-1516549655169-df83a09295ba?q=80&w=600&auto=format&fit=crop'
-      }));
-    }
-  } catch (error) {
-    console.error('获取院区列表失败:', error);
-    campuses.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 加载科室列表
-const loadDepartments = async () => {
-  if (!bookingData.value.campusId) return;
-  
-  loading.value = true;
-  try {
-    const res = await getDepartmentList(bookingData.value.campusId);
-    if (res.code === 200 && res.data) {
-      departmentList.value = res.data;
-      // 按科室名称分组（简化处理，实际可以根据科室类型分组）
-      groupDepartmentsByCategory();
-    }
-  } catch (error) {
-    console.error('获取科室列表失败:', error);
-    departmentList.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 按类别分组科室（简化处理）
-const deptCategories = ref([]);
-const groupDepartmentsByCategory = () => {
-  // 简化处理：将所有科室放在"全部科室"类别下
-  deptCategories.value = [
-    { name: '全部科室', list: departmentList.value }
-  ];
-  if (departmentList.value.length > 0) {
-    activeCategory.value = '全部科室';
-  }
-};
-
-// 加载医生列表
-const loadDoctors = async () => {
-  if (!bookingData.value.campusId || !bookingData.value.deptId) return;
-  
-  loading.value = true;
-  try {
-    const res = await getDoctors(bookingData.value.campusId, bookingData.value.deptId, null);
-    if (res.code === 200 && res.data) {
-      // 根据医生职称计算挂号费
-      const calculatePrice = (title) => {
-        if (!title) return 30;
-        const titleLower = title.toLowerCase();
-        if (titleLower.includes('专家')) return 100;
-        if (titleLower.includes('主任')) return 50;
-        if (titleLower.includes('医师')) return 30;
-        return 30;
-      };
-      
-      doctorList.value = res.data.map(doctor => ({
-        id: doctor.doctorId,
-        name: doctor.doctorName,
-        title: doctor.title || '医师',
-        isExpert: doctor.title && doctor.title.includes('专家'), // 根据职称判断是否为专家
-        price: calculatePrice(doctor.title), // 根据职称计算挂号费
-        skill: doctor.doctorIntro || '暂无介绍',
-        photo: doctor.avatarUrl || 'https://randomuser.me/api/portraits/men/32.jpg',
-        schedule: {}, // 暂时没有排班信息
-        departmentName: doctor.departmentName || '' // 科室名称
-      }));
-    } else {
-      doctorList.value = [];
-    }
-  } catch (error) {
-    console.error('获取医生列表失败:', error);
-    doctorList.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
-
 // --- 就诊人管理逻辑 ---
-const selectedPatientId = ref(null); // 默认不选中
+const selectedPatientId = ref(1); // 默认选中第一个
 const showAddForm = ref(false);
-const newPatient = ref({ name: '', idCard: '', phone: '', dob: '', gender: '男', relation: '其他' });
-const patientList = ref([]); // 从后端获取的就诊人列表
-const loadingPatients = ref(false); // 就诊人加载状态
+const newPatient = ref({ name: '', idCard: '', phone: '', dob: '', gender: '男' });
 
-// 加载就诊人列表
-const loadPatients = async () => {
-  loadingPatients.value = true;
-  try {
-    const res = await getMyPatients();
-    if (res.code === 200 && res.data) {
-      // 将后端返回的数据格式转换为前端需要的格式
-      // 后端返回：{ patientId, name, idCard, phone, relation, dob, gender }
-      // 前端需要：{ id, name, idCard, phone, relation, gender }
-      patientList.value = res.data.map(p => ({
-        id: p.patientId, // 使用 patientId 作为 id
-        name: p.name,
-        idCard: p.idCard,
-        phone: p.phone,
-        relation: p.relation || '其他',
-        gender: p.gender,
-        dob: p.dob // 保留出生日期，用于添加新就诊人时的参考
-      }));
-      
-      // 如果有就诊人，默认选中第一个
-      if (patientList.value.length > 0 && !selectedPatientId.value) {
-        selectedPatientId.value = patientList.value[0].id;
-      }
-    } else {
-      console.error('获取就诊人列表失败:', res.message);
-      patientList.value = [];
-    }
-  } catch (error) {
-    console.error('获取就诊人列表失败:', error);
-    alert(error.message || '获取就诊人列表失败，请检查网络连接');
-    patientList.value = [];
-  } finally {
-    loadingPatients.value = false;
-  }
-};
+// 模拟已保存的就诊人
+const patientList = ref([
+  { id: 1, name: '陆露露', relation: '本人', idCard: '330106199508201234', phone: '18866668888', gender: '女' },
+  { id: 2, name: '张大爷', relation: '父亲', idCard: '330106195501015678', phone: '13900001111', gender: '男' }
+]);
 
 const currentPatient = computed(() => {
   return patientList.value.find(p => p.id === selectedPatientId.value);
@@ -566,312 +395,94 @@ const selectPatient = (id) => {
 };
 
 // 添加新就诊人
-const addNewPatient = async () => {
-  if(!newPatient.value.name || !newPatient.value.idCard || !newPatient.value.phone || !newPatient.value.dob) {
-    alert('请填写完整信息（姓名、身份证号、手机号、出生日期）');
+const addNewPatient = () => {
+  if(!newPatient.value.name || !newPatient.value.idCard || !newPatient.value.phone) {
+    alert('请填写完整信息');
     return;
   }
-
-  // 验证手机号格式
-  const phoneRegex = /^1\d{10}$/;
-  if (!phoneRegex.test(newPatient.value.phone)) {
-    alert('请输入正确的手机号码格式（11位数字，以1开头）');
-    return;
-  }
-
-  // 验证身份证号格式
-  if (newPatient.value.idCard.length !== 18) {
-    alert('请输入18位身份证号');
-    return;
-  }
-
-  loadingPatients.value = true;
-  try {
-    const res = await addPatient({
-      name: newPatient.value.name,
-      idCard: newPatient.value.idCard,
-      phone: newPatient.value.phone,
-      dob: newPatient.value.dob,
-      gender: newPatient.value.gender,
-      relation: newPatient.value.relation || '其他'
-    });
-
-    if (res.code === 200 && res.data) {
-      alert('添加就诊人成功！');
-      // 重新加载就诊人列表
-      await loadPatients();
-      // 自动选中新添加的就诊人
-      if (res.data.patientId) {
-        selectedPatientId.value = res.data.patientId;
-      }
-      showAddForm.value = false;
-      // 清空表单
-      newPatient.value = { name: '', idCard: '', phone: '', dob: '', gender: '男', relation: '其他' };
-    } else {
-      alert(res.message || '添加就诊人失败，请重试');
-    }
-  } catch (error) {
-    console.error('添加就诊人失败:', error);
-    alert(error.message || '添加就诊人失败，请检查网络连接');
-  } finally {
-    loadingPatients.value = false;
-  }
+  const newId = patientList.value.length + 1;
+  const p = {
+    id: newId,
+    ...newPatient.value,
+    relation: '其他'
+  };
+  patientList.value.push(p);
+  selectedPatientId.value = newId; // 自动选中新建的
+  showAddForm.value = false; // 关闭表单
+  // 清空表单
+  newPatient.value = { name: '', idCard: '', phone: '', dob: '', gender: '男' };
 };
 
 const goToConfirm = () => {
-  // 保存选中的就诊人ID到预约数据中
-  if (selectedPatientId.value && currentPatient.value) {
-    bookingData.value.patientId = selectedPatientId.value;
-    bookingData.value.patientName = currentPatient.value.name;
-  }
   currentStep.value = 6;
   window.scrollTo(0, 0);
 };
 
-// --- 排班数据 ---
-const scheduleList = ref([]); // 存储从后端获取的排班数据
+// --- 原有逻辑 ---
+const campuses = [
+  { id: 'zhaohui', name: '浙江省人民医院朝晖院区', addr: '杭州市上塘路158号', img: 'https://images.unsplash.com/photo-1516549655169-df83a09295ba?q=80&w=600&auto=format&fit=crop' },
+  { id: 'yuecheng', name: '浙江省人民医院越城院区', addr: '绍兴市越城区敬宾路299号', img: 'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?q=80&w=400' },
+];
 
-// 动态生成未来7天的日期数据
-const generateWeekData = () => {
-  const weekDays = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-  const weekData = [];
-  const today = new Date();
-  
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const weekDay = weekDays[date.getDay()];
-    const dateStr = `${month}-${day}`;
-    const fullDateStr = `${date.getFullYear()}-${month}-${day}`;
-    
-    weekData.push({
-      date: dateStr,
-      fullDate: fullDateStr, // 完整日期用于匹配排班数据
-      week: weekDay,
-      status: '有号' // 默认状态，实际会根据排班数据更新
-    });
-  }
-  
-  return weekData;
-};
+const deptCategories = [
+  { name: '内科', list: ['心血管内科', '呼吸内科', '消化内科', '神经内科', '肾脏病科'] },
+  { name: '外科', list: ['普通外科', '肝胆胰外科', '骨科', '神经外科', '泌尿外科'] },
+  { name: '妇产科', list: ['妇科', '产科'] }
+];
 
-const weekData = ref(generateWeekData());
+const weekData = [
+  { date: '12-24', week: '周三', status: '有号' },
+  { date: '12-25', week: '周四', status: '满号' },
+  { date: '12-26', week: '周五', status: '有号' },
+  { date: '12-27', week: '周六', status: '有号' },
+  { date: '12-28', week: '周日', status: '有号' },
+  { date: '12-29', week: '周一', status: '有号' },
+  { date: '12-30', week: '周二', status: '有号' },
+];
+
+const doctorList = [
+  { id: 1, name: '孙学锐', title: '主任医师', isExpert: true, price: 50, skill: '发育迟缓、小儿咳嗽、小儿哮喘、小儿厌食症等。', photo: 'https://randomuser.me/api/portraits/women/44.jpg', schedule: { '12-24': ['am', 'pm'], '12-26': ['am'], '12-28': ['pm'] } },
+  { id: 2, name: '潘文胜', title: '主任医师', isExpert: false, price: 30, skill: '食管、胃、肠、肝、胆、胰等消化病的诊治。', photo: 'https://randomuser.me/api/portraits/men/32.jpg', schedule: { '12-24': ['am'], '12-25': [], '12-26': ['pm'] } },
+  { id: 3, name: '汪望月', title: '主任医师', isExpert: true, price: 30, skill: '消化科疾病的规范诊疗，如反流性食管炎。', photo: 'https://randomuser.me/api/portraits/men/85.jpg', schedule: { '12-25': ['am', 'pm'], '12-29': ['am'] } },
+  { id: 4, name: '吴伟权', title: '副主任医师', isExpert: false, price: 30, skill: '擅长消化内镜下的各种诊断和治疗技术。', photo: 'https://randomuser.me/api/portraits/men/11.jpg', schedule: { '12-24': ['pm'], '12-27': ['am', 'pm'] } },
+];
 
 const currentDepts = computed(() => {
-  const cat = deptCategories.value.find(c => c.name === activeCategory.value);
+  const cat = deptCategories.find(c => c.name === activeCategory.value);
   return cat ? cat.list : [];
 });
 
 const filteredDoctors = computed(() => {
   if (bookingMode.value === 'doctor') {
-    return doctorList.value;
+    return doctorList;
   } else {
     const targetDate = weekData[selectedDateIndex.value].date;
-    return doctorList.value.filter(doc => doc.schedule && doc.schedule[targetDate] && doc.schedule[targetDate].length > 0);
+    return doctorList.filter(doc => doc.schedule && doc.schedule[targetDate] && doc.schedule[targetDate].length > 0);
   }
 });
 
-// 选择院区
-const selectCampus = (campus) => {
-  bookingData.value.campusId = campus.id;
-  bookingData.value.campusName = campus.name;
-  currentStep.value = 2;
-  window.scrollTo(0, 0);
-  loadDepartments();
-};
-
-// 选择科室
-const selectDept = (dept) => {
-  bookingData.value.deptId = dept.departmentId;
-  bookingData.value.deptName = dept.departmentName;
-  currentStep.value = 3;
-  window.scrollTo(0, 0);
-  loadDoctors();
-};
-
-const goToDoctorDetail = async (doc) => { 
-  selectedDoctor.value = doc;
-  bookingData.value.doctorId = doc.id; // 保存医生ID
-  currentStep.value = 4;
-  window.scrollTo(0, 0);
-  // 加载该医生的排班信息
-  await loadSchedules(doc.id);
-};
-
-// 加载医生的排班信息
-const loadSchedules = async (doctorId) => {
-  if (!doctorId || !bookingData.value.campusId) return;
-  
-  loading.value = true;
-  try {
-    // 获取未来7天的排班（从今天开始）
-    const today = new Date();
-    const endDate = new Date(today);
-    endDate.setDate(today.getDate() + 7);
-    
-    const startDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-    const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
-    
-    const res = await getSchedules(doctorId, bookingData.value.campusId, startDateStr, endDateStr);
-    console.log('排班API响应:', res);
-    
-    if (res.code === 200 && res.data) {
-      scheduleList.value = res.data;
-      console.log('排班数据:', scheduleList.value);
-    } else {
-      scheduleList.value = [];
-    }
-  } catch (error) {
-    console.error('获取排班信息失败:', error);
-    scheduleList.value = [];
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 判断某个日期和时间段是否有号
-const hasSlot = (doc, dateStr, period) => {
-  // 找到对应的完整日期
-  const dayInfo = weekData.value.find(d => d.date === dateStr);
-  if (!dayInfo) return false;
-  
-  // 将时间段转换为时间段格式
-  // 上午：匹配 08:00-10:00, 08:00-12:00 等
-  // 下午：匹配 13:30-17:00, 14:00-17:00 等
-  let timeSlotPatterns = [];
-  if (period === 'am' || period === '上午') {
-    timeSlotPatterns = ['08:00', '09:00', '10:00']; // 匹配上午时间段
-  } else if (period === 'pm' || period === '下午') {
-    timeSlotPatterns = ['13:30', '14:00', '15:00']; // 匹配下午时间段
-  }
-  
-  // 查找该日期和时间段的排班
-  const schedule = scheduleList.value.find(s => {
-    const scheduleDate = s.workDate ? (typeof s.workDate === 'string' ? s.workDate.split('T')[0] : s.workDate) : '';
-    const matchesDate = scheduleDate === dayInfo.fullDate;
-    
-    // 检查时间段是否匹配
-    let matchesTime = false;
-    if (s.timeSlot) {
-      for (const pattern of timeSlotPatterns) {
-        if (s.timeSlot.startsWith(pattern)) {
-          matchesTime = true;
-          break;
-        }
-      }
-    }
-    
-    return matchesDate && matchesTime && s.isAvailable;
-  });
-  
-  return schedule != null;
-};
-
-// 获取排班信息（用于显示和保存scheduleId）
-const getScheduleForSlot = (dateStr, period) => {
-  const dayInfo = weekData.value.find(d => d.date === dateStr);
-  if (!dayInfo) return null;
-  
-  // 将时间段转换为时间段格式
-  let timeSlotPatterns = [];
-  if (period === 'am' || period === '上午') {
-    timeSlotPatterns = ['08:00', '09:00', '10:00'];
-  } else if (period === 'pm' || period === '下午') {
-    timeSlotPatterns = ['13:30', '14:00', '15:00'];
-  }
-  
-  return scheduleList.value.find(s => {
-    const scheduleDate = s.workDate ? (typeof s.workDate === 'string' ? s.workDate.split('T')[0] : s.workDate) : '';
-    const matchesDate = scheduleDate === dayInfo.fullDate;
-    
-    // 检查时间段是否匹配
-    let matchesTime = false;
-    if (s.timeSlot) {
-      for (const pattern of timeSlotPatterns) {
-        if (s.timeSlot.startsWith(pattern)) {
-          matchesTime = true;
-          break;
-        }
-      }
-    }
-    
-    return matchesDate && matchesTime && s.isAvailable;
-  });
-};
+const selectCampus = (campus) => { bookingData.value.campusName = campus.name; currentStep.value = 2; window.scrollTo(0, 0); };
+const selectDept = (dept) => { bookingData.value.deptName = dept; currentStep.value = 3; window.scrollTo(0, 0); };
+const goToDoctorDetail = (doc) => { selectedDoctor.value = doc; currentStep.value = 4; window.scrollTo(0, 0); };
+const hasSlot = (doc, dateStr, period) => doc.schedule && doc.schedule[dateStr] && doc.schedule[dateStr].includes(period);
 
 const selectSlot = (dayInfo, periodStr) => {
-  // 获取对应的排班信息
-  const schedule = getScheduleForSlot(dayInfo.date, periodStr);
-  if (!schedule) {
-    alert('该时间段暂无号源，请选择其他时间');
-    return;
-  }
-  
-  // 将时间段转换为中文显示
-  const periodDisplay = periodStr === 'am' ? '上午' : '下午';
-  
   bookingData.value.doctorName = selectedDoctor.value.name;
   bookingData.value.doctorTitle = selectedDoctor.value.title;
   bookingData.value.price = selectedDoctor.value.price;
-  bookingData.value.date = dayInfo.fullDate; // 使用完整日期（yyyy-MM-dd格式）
+  bookingData.value.date = dayInfo.date;
   bookingData.value.week = dayInfo.week;
-  bookingData.value.period = periodDisplay; // 保存中文显示
-  bookingData.value.scheduleId = schedule.scheduleId; // 保存排班ID，用于后续预约
-  bookingData.value.timeSlot = schedule.timeSlot; // 保存时间段（如：08:00-10:00）
+  bookingData.value.period = periodStr;
   currentStep.value = 5; // 进入就诊人选择
-  // 进入就诊人选择步骤时，加载就诊人列表
-  loadPatients();
   window.scrollTo(0, 0);
 };
 
-const submitBooking = async () => {
-  // 验证必要数据
-  if (!bookingData.value.patientId) {
-    alert('请选择就诊人');
-    return;
-  }
-  if (!bookingData.value.scheduleId) {
-    alert('请选择就诊时间');
-    return;
-  }
-  if (!bookingData.value.campusId) {
-    alert('预约信息不完整，请重新选择院区');
-    return;
-  }
-
-  if (!confirm('确定要提交预约吗？')) {
-    return;
-  }
-
-  loading.value = true;
-  try {
-    const res = await createAppointment({
-      patientId: bookingData.value.patientId,
-      scheduleId: bookingData.value.scheduleId,
-      hospitalId: bookingData.value.campusId // 使用 campusId 作为 hospitalId
-    });
-
-    if (res.code === 200) {
-      alert('预约成功！请按时就诊。');
-      // 跳转到预约记录页面
-      router.push('/visit-records');
-    } else {
-      alert(res.message || '预约失败，请重试');
-    }
-  } catch (error) {
-    console.error('提交预约失败:', error);
-    alert(error.message || '预约失败，请检查网络连接');
-  } finally {
-    loading.value = false;
+const submitBooking = () => {
+  if (confirm('确定要提交预约吗？')) {
+    alert('预约成功！请按时就诊。');
+    router.push('/user');
   }
 };
-
-// 组件挂载时加载院区列表
-onMounted(() => {
-  loadHospitals();
-});
 </script>
 
 <style scoped>
@@ -942,9 +553,6 @@ onMounted(() => {
 .day-box.active .status.available { color: #aefbc0; }
 .doctor-list-wrapper { background: white; border-radius: 8px; padding: 10px; min-height: 200px; }
 .empty-tip { text-align: center; padding: 40px; color: #999; }
-.empty-tip .empty-icon { font-size: 3rem; margin-bottom: 15px; color: #ccc; }
-.empty-tip p { margin: 10px 0 0 0; font-size: 1rem; }
-.loading-tip { text-align: center; padding: 40px; color: #999; }
 .doctor-row { display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding: 25px; transition: 0.2s; }
 .doc-left { display: flex; gap: 20px; }
 .avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; }
