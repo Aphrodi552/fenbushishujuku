@@ -1,132 +1,74 @@
 <template>
-  <div class="admin-layout">
-    <aside class="admin-sidebar">
-      <div class="sidebar-brand">
-        <div class="logo-box">H</div>
-        <div class="brand-text">
-          <h2>系统管理后台</h2>
-          <small>Distributed DB Admin</small>
+  <div class="dashboard-panel">
+    <div class="overview-grid">
+      <div class="data-card card-blue">
+        <div class="card-title">今日预约总量</div>
+        <div class="card-num">3,421</div>
+        <div class="card-trend up">↑ 12% 环比增长</div>
+        <Icon icon="mdi:calendar-check" class="bg-icon" />
+      </div>
+      <div class="data-card card-purple">
+        <div class="card-title">活跃医生数</div>
+        <div class="card-num">186</div>
+        <div class="card-trend">在线率 98%</div>
+        <Icon icon="mdi:doctor" class="bg-icon" />
+      </div>
+      <div class="data-card card-orange">
+        <div class="card-title">数据库QPS</div>
+        <div class="card-num">8,900</div>
+        <div class="card-trend down">负载均衡正常</div>
+        <Icon icon="mdi:database-search" class="bg-icon" />
+      </div>
+      <div class="data-card card-red">
+        <div class="card-title">异常审计日志</div>
+        <div class="card-num">2</div>
+        <div class="card-trend alert">需立即处理</div>
+        <Icon icon="mdi:alert-decagram" class="bg-icon" />
+      </div>
+    </div>
+
+    <div class="admin-table-section">
+      <div class="section-header">
+        <h3>最近系统操作审计 (Audit Log)</h3>
+        <div class="filter-group">
+          <input type="date" class="date-picker" />
+          <button class="btn-export">导出报表</button>
         </div>
       </div>
 
-      <nav class="nav-menu">
-        <div class="menu-category">核心业务</div>
-        <a
-            v-for="item in menuItems.core"
-            :key="item.id"
-            class="nav-link"
-            :class="{ active: isActive(item) }"
-            @click="go(item)"
-        >
-          <Icon :icon="item.icon" class="nav-icon" />
-          {{ item.name }}
-        </a>
-
-        <div class="menu-category">资源调度</div>
-        <a
-            v-for="item in menuItems.resource"
-            :key="item.id"
-            class="nav-link"
-            :class="{ active: isActive(item) }"
-            @click="go(item)"
-        >
-          <Icon :icon="item.icon" class="nav-icon" />
-          {{ item.name }}
-        </a>
-
-        <div class="menu-category">系统运维</div>
-        <a
-            v-for="item in menuItems.system"
-            :key="item.id"
-            class="nav-link"
-            :class="{ active: isActive(item) }"
-            @click="go(item)"
-        >
-          <Icon :icon="item.icon" class="nav-icon" />
-          {{ item.name }}
-        </a>
-      </nav>
-
-      <div class="sidebar-bottom">
-        <div class="admin-user">
-          <Icon icon="mdi:account-tie" class="avatar-icon" />
-          <span>超级管理员</span>
-        </div>
-        <button class="btn-quit" @click="handleLogout"><Icon icon="mdi:power" /></button>
-      </div>
-    </aside>
-
-    <main class="admin-main">
-      <header class="admin-header">
-        <div class="page-title">
-          {{ pageTitle }}
-        </div>
-        <div class="header-tools">
-          <div class="status-indicator">
-            <span class="dot blinking"></span> 分布式集群状态: 正常
-          </div>
-          <div class="tool-btn"><Icon icon="mdi:bell-outline" /></div>
-          <div class="tool-btn"><Icon icon="mdi:cog-outline" /></div>
-        </div>
-      </header>
-
-      <div class="content-wrapper">
-        <!-- ✅ 子路由页面渲染区 -->
-        <router-view />
-      </div>
-    </main>
+      <table class="admin-table">
+        <thead>
+        <tr>
+          <th>操作ID</th>
+          <th>操作人</th>
+          <th>IP地址</th>
+          <th>操作模块</th>
+          <th>执行动作</th>
+          <th>耗时(ms)</th>
+          <th>状态</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr v-for="i in 5" :key="i">
+          <td>#LOG-202501{{ i }}</td>
+          <td>Admin_001</td>
+          <td>192.168.1.{{ 10 + i }}</td>
+          <td>排班管理</td>
+          <td>修改号源池 [UPDATE]</td>
+          <td>{{ 15 + i * 2 }}ms</td>
+          <td><span class="badge-success">成功</span></td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
+ </script>
 
-const router = useRouter()
-const route = useRoute()
-
-const menuItems = {
-    system: [
-      { id: 'logs', name: '日志与审计', icon: 'mdi:shield-search', to: { name: 'AdminLogs' } },
-    ],
-  core: [
-    { id: 'users', name: '用户管理', icon: 'mdi:account-group', to: { name: 'AdminUsers' } },
-    { id: 'orders', name: '预约订单管理', icon: 'mdi:file-document-edit', to: { name: 'AdminOrders' } },
-    { id: 'doctors', name: '医生管理', icon: 'mdi:doctor', to: { name: 'AdminDoctors' } },
-  ],
-  resource: [
-    { id: 'campus', name: '院区与科室', icon: 'mdi:domain', to: { name: 'AdminCampus' } },
-    { id: 'schedule', name: '排班管理', icon: 'mdi:calendar-multiselect', to: { name: 'AdminSchedule' } },
-  ]
-}
-
-const allItems = computed(() => [...menuItems.core, ...menuItems.resource, ...menuItems.system])
-
-const pageTitle = computed(() => {
-  // 优先使用路由 meta.title
-  if (route.meta?.title) return route.meta.title
-  const hit = allItems.value.find(i => i.to?.name === route.name)
-  return hit?.name || '后台管理'
-})
-
-const isActive = (item) => route.name === item.to?.name
-
-const go = (item) => {
-  if (!item?.to) return
-  router.push(item.to)
-}
-
-const handleLogout = () => {
-  if (confirm('确定退出管理后台吗？')) {
-    // 可按需清理 token/role
-    localStorage.removeItem('role')
-    router.push('/login')
-  }
-}
-</script>
-
-<style scoped>
+ <style scoped>
 /* 整体布局 */
 .admin-layout {
   display: flex;

@@ -17,6 +17,13 @@ import MyPatients from '../views/MyPatients.vue'
 import MyProfile from '../views/MyProfile.vue'
 import MyReports from '../views/MyReports.vue'
 import VisitRecords from '../views/VisitRecords.vue'
+import AdminOrderManagement from "../views/AdminOrderManagement.vue";
+import AdminUserManagement from "../views/AdminUserManagement.vue";
+import AdminAuditLogManagement from "../views/AdminAuditLogManagement.vue";
+import AdminCampusDepartmentManagement from "../views/AdminCampusDepartmentManagement.vue";
+import AdminScheduleManagement from "../views/AdminScheduleManagement.vue";
+import AdminDoctorManagement from "../views/AdminDoctorManagement.vue";
+
 
 const routes = [
   {
@@ -35,8 +42,21 @@ const routes = [
   },
   {
     path: '/admin',
-    name: 'AdminDashboard',
-    component: AdminDashboard
+    name: 'AdminDashboard', // 保持你原命名，避免外部引用破坏
+    component: AdminDashboard,
+    meta: { requiresRole: 'admin' },
+    children: [
+      { path: '', redirect: { name: 'AdminUsers' } },
+
+      { path: 'users', name: 'AdminUsers', component: AdminUserManagement, meta: { title: '用户管理' } },
+      { path: 'doctors', name: 'AdminDoctors', component: AdminDoctorManagement, meta: { title: '医生管理' } },
+
+      { path: 'orders', name: 'AdminOrders', component: AdminOrderManagement, meta: { title: '预约订单管理' } },
+      { path: 'schedule', name: 'AdminSchedule', component: AdminScheduleManagement, meta: { title: '排班管理' } },
+      { path: 'campus', name: 'AdminCampus', component: AdminCampusDepartmentManagement, meta: { title: '院区与科室' } },
+      { path: 'logs', name: 'AdminLogs', component: AdminAuditLogManagement, meta: { title: '日志与审计' } },
+    ]
+
   },
   {
     path: '/doctor',

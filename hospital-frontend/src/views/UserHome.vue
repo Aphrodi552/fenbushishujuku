@@ -6,7 +6,7 @@
         <div class="logo-group">
           <div class="logo-icon">🏥</div>
           <div class="logo-text">
-            <h1>浙江工业大学健行医院</h1>
+            <h1>浙江省人民医院</h1>
             <small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small>
           </div>
         </div>
@@ -104,95 +104,90 @@
           <button class="arrow arrow-right" @click="nextSlide">›</button>
         </div>
 
-        <!-- 三行两列布局，每行独立手风琴效果 -->
         <div class="grid-menu">
-          <!-- 第一行 -->
-          <div class="menu-row">
-            <div class="menu-item blue" @click="router.push('/appointment')">
-              <div class="icon-wrap"><Icon icon="mdi:calendar-check" /></div>
-              <div class="text-wrap">
-                <h3>预约挂号</h3>
-                <small>APPOINTMENT</small>
-              </div>
-              <Icon icon="mdi:calendar-blank" class="bg-icon" />
+          
+          <div class="menu-item blue" @click="router.push('/appointment')">
+            <div class="icon-wrap"><Icon icon="mdi:calendar-check" /></div>
+            <div class="text-wrap">
+              <h3>预约挂号</h3>
+              <small>APPOINTMENT</small>
             </div>
-            <div class="menu-item purple" @click="router.push('/intro')">
-              <div class="icon-wrap"><Icon icon="mdi:newspaper-variant-outline" /></div>
-              <div class="text-wrap">
-                <h3>医院动态</h3>
-                <small>NEWS</small>
-              </div>
-              <Icon icon="mdi:newspaper" class="bg-icon" />
-            </div>
+            <Icon icon="mdi:calendar-blank" class="bg-icon" />
           </div>
 
-          <!-- 第二行 -->
-          <div class="menu-row">
-            <div class="menu-item green">
-              <div class="icon-wrap"><Icon icon="mdi:map-marker-path" /></div>
-              <div class="text-wrap">
-                <h3>就诊指南</h3>
-                <small>GUIDE</small>
-              </div>
-              <Icon icon="mdi:map" class="bg-icon" />
+          <div class="menu-item purple" @click="router.push('/intro')">
+            <div class="icon-wrap"><Icon icon="mdi:newspaper-variant-outline" /></div>
+            <div class="text-wrap">
+              <h3>医院动态</h3>
+              <small>NEWS</small>
             </div>
-            <div class="menu-item dark" @click="router.push('/profile')">
-              <div class="icon-wrap"><Icon icon="mdi:account-cog-outline" /></div>
-              <div class="text-wrap">
-                <h3>我的信息</h3>
-                <small>PROFILE</small>
-              </div>
-              <Icon icon="mdi:account-details" class="bg-icon" />
-            </div>
+            <Icon icon="mdi:newspaper" class="bg-icon" />
           </div>
 
-          <!-- 第三行 -->
-          <div class="menu-row">
-            <div class="menu-item teal" @click="router.push('/patients')">
-              <div class="icon-wrap"><Icon icon="mdi:account-heart-outline" /></div>
-              <div class="text-wrap">
-                <h3>我的就诊人</h3>
-                <small>PATIENTS</small>
-              </div>
-              <Icon icon="mdi:account-group" class="bg-icon" />
+          <div class="menu-item green">
+            <div class="icon-wrap"><Icon icon="mdi:map-marker-path" /></div>
+            <div class="text-wrap">
+              <h3>就诊指南</h3>
+              <small>GUIDE</small>
             </div>
-            <div class="menu-item orange" @click="router.push('/specialist')">
-              <div class="icon-wrap"><Icon icon="mdi:doctor" /></div>
-              <div class="text-wrap">
-                <h3>专家介绍</h3>
-                <small>DOCTORS</small>
-              </div>
-              <Icon icon="mdi:stethoscope" class="bg-icon" />
-            </div>
+            <Icon icon="mdi:map" class="bg-icon" />
           </div>
+          
+          <div class="menu-item dark" @click="router.push('/profile')">
+            <div class="icon-wrap"><Icon icon="mdi:account-cog-outline" /></div>
+            <div class="text-wrap">
+              <h3>我的信息</h3>
+              <small>PROFILE</small>
+            </div>
+            <Icon icon="mdi:account-details" class="bg-icon" />
+          </div>
+
+          <div class="menu-item teal" @click="router.push('/patients')">
+            <div class="icon-wrap"><Icon icon="mdi:account-heart-outline" /></div>
+            <div class="text-wrap">
+              <h3>我的就诊人</h3>
+              <small>PATIENTS</small>
+            </div>
+            <Icon icon="mdi:account-group" class="bg-icon" />
+          </div>
+
+          <div class="menu-item orange" @click="router.push('/specialist')">
+            <div class="icon-wrap"><Icon icon="mdi:doctor" /></div>
+            <div class="text-wrap">
+              <h3>专家介绍</h3>
+              <small>DOCTORS</small>
+            </div>
+            <Icon icon="mdi:stethoscope" class="bg-icon" />
+          </div>
+
         </div>
 
       </div>
 
       <div class="container-fluid action-bar-row">
-        <div class="action-big-btn btn-orange-gradient" @click="handleLink('科室导航')">
-          <Icon icon="mdi:map-marker-path" class="action-icon" />
+        <div class="action-big-btn btn-orange-gradient" @click="handleLink('在线问诊')">
+          <Icon icon="mdi:monitor-account" class="action-icon" />
           <div class="action-info">
-            <h3>科室导航</h3>
-            <span>Department Navigation</span>
+            <h3>在线问诊</h3>
+            <span>Online Inquiry</span>
           </div>
-          <Icon icon="mdi:map-search" class="bg-deco" />
+          <Icon icon="mdi:message-video" class="bg-deco" />
         </div>
-        <div class="action-big-btn btn-blue-gradient" @click="handleLink('预约记录')">
-          <Icon icon="mdi:calendar-clock" class="action-icon" />
+        <div class="action-big-btn btn-blue-gradient" @click="handleLink('通知公告')">
+          <Icon icon="mdi:clipboard-text-search-outline" class="action-icon" />
           <div class="action-info">
-            <h3>预约记录</h3>
-            <span>Appointment Records</span>
+            <h3>通知公告</h3>
+            <span>Notice</span>
           </div>
-          <Icon icon="mdi:clipboard-list" class="bg-deco" />
+          <Icon icon="mdi:bullhorn" class="bg-deco" />
         </div>
-        <div class="action-big-btn btn-dark-gradient" @click="handleLink('就诊记录')">
-          <Icon icon="mdi:file-document-edit" class="action-icon" />
+        <div class="action-big-btn btn-dark-gradient" @click="handleLink('健康体检')">
+          <Icon icon="mdi:heart-pulse" class="action-icon" />
           <div class="action-info">
-            <h3>就诊记录</h3>
-            <span>Visit Records</span>
+            <h3>健康体检</h3>
+            <span>Checkup</span>
           </div>
-          <Icon icon="mdi:medical-bag" class="bg-deco" />
+          <Icon icon="mdi:shield-check" class="bg-deco" />
         </div>
       </div>
 
@@ -300,7 +295,7 @@
               <div class="logo-placeholder">
                 <Icon icon="mdi:hospital-building" class="logo-ico" />
                 <div class="logo-txt">
-                  <h3>浙江工业大学健行医院</h3>
+                  <h3>浙江省人民医院</h3>
                   <small>ZHEJIANG PROVINCIAL PEOPLE'S HOSPITAL</small>
                 </div>
               </div>
@@ -360,7 +355,7 @@ const slides = [
   {
     image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?q=80&w=2000&auto=format&fit=crop',
     tag: '🏥 医院要闻',
-    title: '浙江工业大学健行医院夜间门诊正式开诊',
+    title: '浙江省人民医院夜间门诊正式开诊',
     desc: '为方便上班族及学生群体就医，我院特开设夜间门诊服务，覆盖内科、外科及专家门诊。'
   },
   {
@@ -402,7 +397,7 @@ const campusList = [
     id: 'zhaohui',
     name: '朝晖院区',
     desc: 'Zhaohui Campus',
-    image: 'https://media.istockphoto.com/id/2215828058/ja/%E3%82%B9%E3%83%88%E3%83%83%E3%82%AF%E3%83%95%E3%82%A9%E3%83%88/%E6%98%8E%E3%82%8B%E3%81%84%E8%89%B2%E3%81%AE%E6%9C%A8%E8%A3%BD%E3%81%AE%E3%83%89%E3%82%A2%E3%81%A8%E9%9D%92%E3%81%84%E5%BA%A7%E5%B8%AD%E3%82%92%E5%82%99%E3%81%88%E3%81%9F%E3%83%A2%E3%83%80%E3%83%B3%E3%81%AA%E7%97%85%E9%99%A2%E3%81%AE%E5%BB%8A%E4%B8%8B%E3%81%AF%E3%81%99%E3%81%A3%E3%81%8D%E3%82%8A%E3%81%A8%E3%81%97%E3%81%9F%E3%83%9F%E3%83%8B%E3%83%9E%E3%83%AB%E3%81%AA%E3%83%98%E3%83%AB%E3%82%B9%E3%82%B1%E3%82%A2%E3%82%A4%E3%83%B3%E3%83%86%E3%83%AA%E3%82%A2%E3%83%87%E3%82%B6%E3%82%A4%E3%83%B3%E3%81%AE%E3%82%B3%E3%83%B3%E3%82%BB%E3%83%97%E3%83%88%E3%82%92%E7%A4%BA%E3%81%97%E3%81%A6%E3%81%84%E3%81%BE%E3%81%993d%E3%83%AC%E3%83%B3%E3%83%80%E3%83%AA%E3%83%B3%E3%82%B0.jpg?s=1024x1024&w=is&k=20&c=-AlCHCO4B37iyuc97dbejP_usxjoAGPKCMnU73cn3dI=',
+    image: 'https://images.unsplash.com/photo-1587351021759-3e566b9af9ef?q=80&w=1920',
     link: '#'
   },
   {
@@ -421,29 +416,13 @@ const footerAddresses = [
   { name: '屏峰院区', addr: '杭州市西湖区留和路288号' }
 ];
 const managedHospitals = [
-  '浙江工业大学健行医院淳安分院', '浙江工业大学健行医院天台分院', '浙江工业大学健行医院浙东南院区',
-  '浙江工业大学健行医院定海分院', '浙江工业大学健行医院海宁医院', '浙江工业大学健行医院南浔院区'
+  '浙江省人民医院淳安分院', '浙江省人民医院天台分院', '浙江省人民医院浙东南院区',
+  '浙江省人民医院定海分院', '浙江省人民医院海宁医院', '浙江省人民医院南浔院区'
 ];
 const systemLinks = ['国家卫生健康委员会', '浙江省卫生健康委员会', '杭州医学院'];
 
 // --- 逻辑 ---
-const handleLink = (name) => {
-  console.log('跳转:', name);
-  // 根据名称跳转到对应的路由
-  switch (name) {
-    case '科室导航':
-      router.push('/department');
-      break;
-    case '预约记录':
-      router.push('/reports');
-      break;
-    case '就诊记录':
-      router.push('/visit-records');
-      break;
-    default:
-      console.log('未知的链接:', name);
-  }
-};
+const handleLink = (name) => console.log('跳转:', name);
 
 // 加载当前院区的科室数据
 const loadDepartmentData = async () => {
@@ -563,98 +542,15 @@ onUnmounted(() => { stopAutoPlay(); });
 .hero-carousel:hover .arrow { opacity: 1; }
 .arrow-left { left: 0; } .arrow-right { right: 0; }
 
-/* 三行两列布局 - 每行独立横向手风琴效果 */
-.grid-menu { 
-  flex: 1; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 15px; 
-}
-
-/* 每一行是一个独立的 Flex 容器 */
-.menu-row {
-  display: flex;
-  gap: 15px;
-  flex: 1;
-  min-height: 0; /* 允许 flex 项目收缩 */
-}
-
-/* 默认状态：每行的两个卡片等宽（各占50%） */
-.menu-item { 
-  flex: 1 1 0; /* flex-grow: 1, flex-shrink: 1, flex-basis: 0 */
-  position: relative; 
-  border-radius: 10px; 
-  color: white; 
-  padding: 0 25px; 
-  display: flex; 
-  align-items: center; 
-  gap: 15px; 
-  cursor: pointer; 
-  transition: flex 0.4s ease-in-out, transform 0.3s ease, box-shadow 0.3s ease; 
-  overflow: hidden; 
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  min-width: 0; /* 防止内容溢出 */
-}
-
-/* 当鼠标悬停在某一行的某个卡片上时，该卡片展开到55%，同行的另一个卡片收缩到45% */
-.menu-row:hover .menu-item {
-  flex: 1 1 0; /* 默认收缩到45% */
-}
-
-.menu-row:hover .menu-item:hover {
-  flex: 1.22 1 0; /* 悬停的卡片展开到55% (1.22 / (1.22 + 1) ≈ 55%) */
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-}
-
-/* 图标和文字容器 */
-.icon-wrap { 
-  font-size: 2.2rem; 
-  display: flex; 
-  align-items: center; 
-  flex-shrink: 0; /* 图标不收缩 */
-}
-
-.text-wrap { 
-  flex: 1;
-  min-width: 0; /* 允许文字容器收缩 */
-  white-space: nowrap; /* 防止文字换行 */
-  overflow: hidden; /* 隐藏溢出内容 */
-}
-
-.text-wrap h3 { 
-  margin: 0; 
-  font-size: 1.2rem; 
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.text-wrap small { 
-  font-size: 0.75rem; 
-  opacity: 0.8; 
-  display: block;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.bg-icon { 
-  position: absolute; 
-  right: 10px; 
-  bottom: 10px; 
-  font-size: 4.5rem; 
-  opacity: 0.15; 
-  transform: rotate(-15deg); 
-  transition: 0.3s;
-  pointer-events: none; /* 防止图标阻挡点击 */
-}
-
-.menu-item:hover .bg-icon { 
-  transform: rotate(0) scale(1.1); 
-  opacity: 0.25; 
-}
+/* 六宫格 */
+.grid-menu { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: 15px; }
+.menu-item { position: relative; border-radius: 10px; color: white; padding: 0 25px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: all 0.3s; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.menu-item:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.15); }
+.icon-wrap { font-size: 2.2rem; display: flex; align-items: center; }
+.text-wrap h3 { margin: 0; font-size: 1.2rem; font-weight: 600; }
+.text-wrap small { font-size: 0.75rem; opacity: 0.8; display: block; }
+.bg-icon { position: absolute; right: 10px; bottom: 10px; font-size: 4.5rem; opacity: 0.15; transform: rotate(-15deg); transition: 0.3s; }
+.menu-item:hover .bg-icon { transform: rotate(0) scale(1.1); opacity: 0.25; }
 .blue { background: linear-gradient(135deg, #4481eb, #04befe); }
 .purple { background: linear-gradient(135deg, #a55eea, #8854d0); }
 .green { background: linear-gradient(135deg, #26de81, #20bf6b); }
@@ -662,87 +558,14 @@ onUnmounted(() => { stopAutoPlay(); });
 .teal { background: linear-gradient(135deg, #2bcbba, #0fb9b1); }
 .orange { background: linear-gradient(135deg, #fd9644, #fa8231); }
 
-/* 3. 底部三按钮 - 横向手风琴效果 */
-.action-bar-row { 
-  display: flex; 
-  gap: 20px; 
-  margin-top: 20px; 
-  height: 100px; 
-  width: 100%; 
-}
-
-/* 默认状态：三个卡片等宽 */
-.action-big-btn { 
-  flex: 1 1 0; /* flex-grow: 1, flex-shrink: 1, flex-basis: 0 */
-  border-radius: 10px; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  gap: 15px; 
-  color: white; 
-  position: relative; 
-  overflow: hidden; 
-  cursor: pointer; 
-  transition: flex-grow 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease;
-  min-width: 0; /* 防止内容溢出 */
-}
-
-/* 当鼠标悬停在父容器上时，所有卡片收缩到各占约30% */
-.action-bar-row:hover .action-big-btn {
-  flex-grow: 0.3;
-}
-
-/* 当鼠标悬停在某个卡片上时，该卡片展开到约40%，其他卡片保持约30% */
-.action-bar-row:hover .action-big-btn:hover {
-  flex-grow: 0.4; /* 悬停的卡片占据约40%空间 */
-  transform: translateY(-5px);
-}
-
-/* 防止内容换行和错位 */
-.action-big-btn .action-info {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.action-big-btn .action-info h3 {
-  margin: 0; 
-  font-size: 1.4rem; 
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.action-big-btn .action-info span {
-  font-size: 0.8rem; 
-  opacity: 0.8; 
-  text-transform: uppercase;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  display: block;
-}
-
-.action-icon { 
-  font-size: 2.8rem; 
-  background: rgba(255,255,255,0.2); 
-  padding: 8px; 
-  border-radius: 50%; 
-  flex-shrink: 0; /* 图标不收缩 */
-}
-
-.bg-deco { 
-  position: absolute; 
-  right: -10px; 
-  bottom: -15px; 
-  font-size: 5rem; 
-  opacity: 0.15; 
-  transform: rotate(-15deg);
-  pointer-events: none; /* 防止图标阻挡点击 */
-}
-
+/* 3. 底部三按钮 */
+.action-bar-row { display: flex; gap: 20px; margin-top: 20px; height: 100px; width: 100%; }
+.action-big-btn { flex: 1; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 15px; color: white; position: relative; overflow: hidden; cursor: pointer; transition: 0.3s; }
+.action-big-btn:hover { transform: translateY(-5px); }
+.action-icon { font-size: 2.8rem; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 50%; }
+.action-info h3 { margin: 0; font-size: 1.4rem; font-weight: 600; }
+.action-info span { font-size: 0.8rem; opacity: 0.8; text-transform: uppercase; }
+.bg-deco { position: absolute; right: -10px; bottom: -15px; font-size: 5rem; opacity: 0.15; transform: rotate(-15deg); }
 .btn-orange-gradient { background: linear-gradient(135deg, #f1c40f, #e67e22); }
 .btn-blue-gradient { background: linear-gradient(135deg, #5dade2, #3498db); }
 .btn-dark-gradient { background: linear-gradient(135deg, #34495e, #1a252f); }
@@ -820,10 +643,7 @@ onUnmounted(() => { stopAutoPlay(); });
 
 @media (max-width: 1024px) {
   .content-row { height: auto; flex-direction: column; }
-  /* 响应式：小屏幕时每行仍保持2列，但可以调整间距 */
-  .menu-row {
-    gap: 10px;
-  }
+  .grid-menu { grid-template-columns: 1fr 1fr 1fr; }
   .campus-content-inner { flex-direction: column-reverse; }
   .footer-content { flex-direction: column; }
 }
