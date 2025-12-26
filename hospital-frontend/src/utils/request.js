@@ -14,6 +14,11 @@ service.interceptors.request.use(
   config => {
     // 以后做登录功能时，在这里把 token 加到 header 里
     // config.headers['Authorization'] = 'Bearer ' + token;
+    // 从localStorage获取token并添加到请求头
+    const token = localStorage.getItem('hospital_token');
+    if (token) {
+      config.headers['Authorization'] = 'Bearer ' + token;
+    }
     return config;
   },
   error => {

@@ -32,11 +32,10 @@ public class GlobalExceptionHandler {
         // 打印错误日志到控制台，方便调试
         System.out.println("捕获业务异常: " + e.getMessage());
         
-        // 返回失败的 Result，状态码设为 500 (或者你定义的其他错误码)
         // 这里的 code 是 JSON 里的 code，HTTP 状态码依然是 200
         return Result.error(500, e.getMessage());
     }
-
+        
 
     /**
      * 处理所有不可知的异常
@@ -120,12 +119,3 @@ public class GlobalExceptionHandler {
         return Result.error(ResultCode.FORBIDDEN, e.getMessage());
     }
 
-//    /**
-//     * 处理业务异常
-//     */
-//    @ExceptionHandler(BusinessException.class)
-//    @ResponseStatus(HttpStatus.BAD_REQUEST)
-//    public Result handleBusinessException(BusinessException e) {
-//        return Result.error(e.getCode(), e.getMessage());
-//    }
-}

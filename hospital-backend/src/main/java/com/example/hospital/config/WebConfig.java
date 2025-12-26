@@ -77,14 +77,25 @@ public class WebConfig implements WebMvcConfigurer {
     /**
      * 跨域配置（保留：MVC 层 CORS 配置）
      * 说明：实际生效优先由上面的 CorsFilter 保障；这里保留不冲突。
+                        "/api/auth/**",                 // 放行认证相关接口（登录/注册）
+                        "/api/hospital/departments",    // 放行科室列表接口
+                        "/api/hospital/departments/**", // 放行科室详情接口
+                        "/api/hospital/list",           // 放行医院列表接口
+                        "/api/hospitals/**",            // 放行医院相关接口
+                        "/error"                        // 放行错误页面
+                );
+    }
+
+    /**
+     * 全局跨域配置
      */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:5173")
-                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(true)
-                .maxAge(3600);
+                .allowedOriginPatterns("http://localhost:5173") // 允许前端地址
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS") // 允许的请求方法
+                .allowedHeaders("*")       // 允许所有请求头
+                .allowCredentials(true)    // 允许携带 cookie
+                .maxAge(3600);             // 预检请求缓存时间
     }
 }

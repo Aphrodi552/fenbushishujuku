@@ -10,11 +10,10 @@ import lombok.Data;
 public class Doctor {
     @TableId
     private String doctorId;     // 主键
-
     private String userId;       // 外键（User.user_id）
-    private String hospitalId;   // 院区/分片键
+    private String departmentId; // 外键（Department.department_id）
     private String doctorName;   // 姓名
-    private String doctorGender; // '男'/'女'
+    private String doctorGender; // 取值限定：'男'/'女'
     private String doctorIdcard; // 非空且唯一
     private String title;        // 职称
     private String doctorPhone;  // 非空且唯一
@@ -27,4 +26,5 @@ public class Doctor {
     private String departmentId;
 
 
+}
 }
