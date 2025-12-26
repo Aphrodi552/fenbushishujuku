@@ -6,5 +6,6 @@ import org.apache.ibatis.annotations.Mapper;
 
 @Mapper
 public interface DoctorMapper extends BaseMapper<Doctor> {
-    // 继承后即可使用 MyBatis-Plus 提供的所有自动 SQL 功能
+    // 使用 MyBatis-Plus 的 updateById
+    // 不允许自定义 UPDATE 语句去修改 user_id / hospital_id / department_id
 }

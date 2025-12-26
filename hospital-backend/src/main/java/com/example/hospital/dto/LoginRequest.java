@@ -51,18 +51,6 @@ public class LoginRequest {
             return Result.success(Map.of("token", token));
         }
 
-        /**
-         * 用户注册接口
-         * @param registerRequest 包含手机号和密码的注册请求体
-         * @return 注册后的用户信息
-         */
-        @PassToken // 这个注解表示该接口不需要Token验证
-        @PostMapping("/register")
-        public Result<com.example.hospital.entity.User> register(@RequestBody com.example.hospital.dto.RegisterRequest registerRequest) {
-            com.example.hospital.entity.User user = authService.register(registerRequest);
-            return Result.success(user);
-        }
-
     }
 }
 

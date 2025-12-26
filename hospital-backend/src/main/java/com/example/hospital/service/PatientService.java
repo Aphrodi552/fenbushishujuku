@@ -25,20 +25,6 @@ public interface PatientService {
      */
     PatientResponse addPatientForUser(String userId, AddPatientRequest request);
 
-    /**
-     * 更新就诊人信息
-     * @param userId 用户ID
-     * @param patientId 就诊人ID
-     * @param request 更新请求数据
-     * @return 更新后的就诊人信息
-     */
-    PatientResponse updatePatient(String userId, String patientId, AddPatientRequest request);
-
-    /**
-     * 删除用户与就诊人的关联关系
-     * @param userId 用户ID
-     * @param patientId 就诊人ID
-     */
-    void deletePatient(String userId, String patientId);
+    // 更新和删除的功能可以后续再添加
 }
 
